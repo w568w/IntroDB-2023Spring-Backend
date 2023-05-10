@@ -26,21 +26,13 @@ pub struct Model {
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::sold_list::Entity")]
-    SoldList,
-    #[sea_orm(has_many = "super::stockin_list::Entity")]
-    StockinList,
+    #[sea_orm(has_many = "super::order_list::Entity")]
+    OrderList,
 }
 
-impl Related<super::sold_list::Entity> for Entity {
+impl Related<super::order_list::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::SoldList.def()
-    }
-}
-
-impl Related<super::stockin_list::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::StockinList.def()
+        Relation::OrderList.def()
     }
 }
 

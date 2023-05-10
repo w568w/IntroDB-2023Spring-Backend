@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::TicketStatus;
 
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "sold_list")]
+#[sea_orm(table_name = "order_list")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
