@@ -1,14 +1,16 @@
-use axum::{
-    routing::get,
-    Router,
-};
+use actix_web::{App, HttpServer};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
+mod api;
 
-#[tokio::main]
-async fn main() {
-    let app = Router::new().route("/", get(|| async { "Hello, World!" }));
-
-    axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| {
+        App::new().configure(api::configure()).service(
+            SwaggerUi::new("/docs/{_:.*}").url("/api-docs/openapi.json", api::ApiDoc::openapi()),
+        )
+    })
+    .bind(("127.0.0.1", 8080))?
+    .run()
+    .await
 }

@@ -1,7 +1,8 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize, ToSchema)]
 #[sea_orm(table_name = "book")]
 pub struct Model {
     #[sea_orm(primary_key)]
@@ -32,3 +33,11 @@ impl Related<super::order_list::Entity> for Entity {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+#[derive(ToSchema, DeriveIntoActiveModel, Deserialize)]
+pub struct UpdateBook {
+    pub title: String,
+    pub author: String,
+    pub publisher: String,
+    pub out_price: f32,
+}

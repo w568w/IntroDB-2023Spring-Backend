@@ -5,5 +5,7 @@ edition = "2021"
 
 
 [dependencies]
+fromsuper = "^0.1"
 sea-orm = { workspace = true }
 serde = { workspace = true }
+utoipa = { workspace = true }

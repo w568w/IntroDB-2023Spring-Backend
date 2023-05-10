@@ -1,5 +1,7 @@
+use fromsuper::FromSuper;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use crate::TicketStatus;
 
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
@@ -56,3 +58,23 @@ impl Related<super::user::Entity> for Entity {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+#[derive(ToSchema, DeriveIntoActiveModel, Deserialize)]
+pub struct NewOrder {
+    pub book_isbn: String,
+    pub total_price: f32,
+    pub total_count: i32,
+}
+
+#[derive(FromSuper, ToSchema, Serialize)]
+#[fromsuper(from_type = "Model")]
+pub struct GetOrder {
+    pub id: i32,
+    pub total_price: f32,
+    pub total_count: i32,
+    pub status: TicketStatus,
+    pub created_at: DateTime,
+    pub updated_at: DateTime,
+    pub book_isbn: String,
+    pub operator_id: i32,
+}

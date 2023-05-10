@@ -1,5 +1,7 @@
+use fromsuper::FromSuper;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "transaction")]
@@ -27,3 +29,12 @@ pub enum Relation {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+#[derive(FromSuper, ToSchema, Serialize)]
+#[fromsuper(from_type = "Model")]
+pub struct GetTransaction {
+    pub id: i64,
+    pub created_at: DateTime,
+    pub total_price: f32,
+    pub ticket_id: i32,
+}

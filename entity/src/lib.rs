@@ -3,10 +3,11 @@ pub mod order_list;
 pub mod transaction;
 pub mod user;
 
-use sea_orm::entity::prelude::*;
-use serde::{Serialize, Deserialize};
+use sea_orm::{entity::prelude::*, IntoActiveValue, ActiveValue};
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Debug, PartialEq, Eq, Clone, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, EnumIter, DeriveActiveEnum, Serialize, Deserialize, ToSchema)]
 #[non_exhaustive]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "ticket_status")]
 pub enum TicketStatus {
@@ -24,7 +25,13 @@ impl Default for TicketStatus {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+impl IntoActiveValue<TicketStatus> for TicketStatus {
+    fn into_active_value(self) -> ActiveValue<TicketStatus> {
+        ActiveValue::Set(self)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, EnumIter, DeriveActiveEnum, Serialize, Deserialize, ToSchema)]
 #[non_exhaustive]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "sex")]
 pub enum Sex {
@@ -34,4 +41,10 @@ pub enum Sex {
     Female,
     #[sea_orm(string_value = "NonBinary")]
     NonBinary,
+}
+
+impl IntoActiveValue<Sex> for Sex {
+    fn into_active_value(self) -> ActiveValue<Sex> {
+        ActiveValue::Set(self)
+    }
 }

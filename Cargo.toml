@@ -8,11 +8,18 @@ members = [".", "entity"]
 
 [workspace.dependencies]
 # 跨 Package 的依赖。各个 Package 只需要在 Cargo.toml 中声明依赖 { workspace = true } 即可。
-sea-orm = { version = "^0.11", features = ["sqlx-mysql", "runtime-actix-native-tls", "macros"] }
+sea-orm = { version = "^0.11", features = [
+    "sqlx-mysql",
+    "runtime-actix-native-tls",
+    "macros",
+] }
 serde = { version = "^1.0", features = ["derive"] }
+utoipa = { version = "^3", features = ["actix_extras", "chrono"] }
 
 [dependencies]
-axum = "^0.6"
-tokio = { version = "^1.28", features = ["macros", "rt-multi-thread"] }
-tower = "^0.4"
+entity = { path = "entity" }
+actix-web = "^4"
+utoipa = { workspace = true }
+utoipa-swagger-ui = { version = "^3", features = ["actix-web"] }
 sea-orm = { workspace = true }
+serde = { workspace = true }
