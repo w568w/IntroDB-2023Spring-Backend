@@ -10,13 +10,13 @@ pub mod transactions;
 
 #[derive(Serialize, ToSchema)]
 pub struct GeneralResponse {
-    message: String,
+    pub message: String,
 }
 
 #[derive(Deserialize, ToSchema)]
 pub struct PagingRequest {
-    page: u32,
-    page_size: u32,
+    pub page: u32,
+    pub page_size: u32,
 }
 
 #[derive(OpenApi)]

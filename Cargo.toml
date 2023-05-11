@@ -19,6 +19,9 @@ utoipa = { version = "^3", features = ["actix_extras", "chrono"] }
 [dependencies]
 entity = { path = "entity" }
 actix-web = "^4"
+pin-project = "^1"
+jsonwebtoken = "^8"
+either = "^1"
 utoipa = { workspace = true }
 utoipa-swagger-ui = { version = "^3", features = ["actix-web"] }
 sea-orm = { workspace = true }

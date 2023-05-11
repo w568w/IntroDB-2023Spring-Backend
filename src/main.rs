@@ -1,7 +1,9 @@
+#![feature(min_specialization, ready_into_inner)]
 use actix_web::{App, HttpServer};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 mod api;
+mod utils;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

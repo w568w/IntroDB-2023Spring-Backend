@@ -76,6 +76,7 @@ pub async fn register(info: AJson<NewUser>, _req: HttpRequest) -> AResult<AJson<
 )]
 #[get("/user")]
 pub async fn get_users(
+    // _test: APermission<(), AllRejected>,
     page: Query<PagingRequest>,
     _req: HttpRequest,
 ) -> AResult<AJson<Vec<GetUser>>> {
