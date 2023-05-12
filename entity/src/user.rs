@@ -1,9 +1,9 @@
 use fromsuper::FromSuper;
-use sea_orm::entity::prelude::*;
+use sea_orm::{entity::prelude::*, ActiveValue::NotSet, IntoActiveModel, Set};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::Sex;
+use crate::{to_active, Sex};
 
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "user")]
@@ -53,4 +53,25 @@ pub struct NewUser {
     pub role: String,
     pub real_name: String,
     pub sex: Sex,
+}
+
+#[derive(ToSchema, Deserialize)]
+pub struct UpdateUser {
+    pub password_salt: Option<String>,
+    pub role: Option<String>,
+    pub real_name: Option<String>,
+    pub sex: Option<Sex>,
+}
+
+impl IntoActiveModel<ActiveModel> for UpdateUser {
+    fn into_active_model(self) -> ActiveModel {
+        ActiveModel {
+            id: NotSet,
+            password_salt: to_active(self.password_salt),
+            secret_key: NotSet,
+            role: to_active(self.role),
+            real_name: to_active(self.real_name),
+            sex: to_active(self.sex),
+        }
+    }
 }

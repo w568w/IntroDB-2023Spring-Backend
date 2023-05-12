@@ -3,11 +3,20 @@ pub mod order_list;
 pub mod transaction;
 pub mod user;
 
-use sea_orm::{entity::prelude::*, IntoActiveValue, ActiveValue};
+use sea_orm::{entity::prelude::*, ActiveValue, IntoActiveValue};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, PartialEq, Eq, Clone, EnumIter, DeriveActiveEnum, Serialize, Deserialize, ToSchema)]
+pub fn to_active<V: Into<Value>, T: IntoActiveValue<V>>(value: Option<T>) -> ActiveValue<V> {
+    match value {
+        Some(v) => v.into_active_value(),
+        None => ActiveValue::NotSet,
+    }
+}
+
+#[derive(
+    Debug, PartialEq, Eq, Clone, EnumIter, DeriveActiveEnum, Serialize, Deserialize, ToSchema,
+)]
 #[non_exhaustive]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "ticket_status")]
 pub enum TicketStatus {
@@ -33,7 +42,9 @@ impl IntoActiveValue<TicketStatus> for TicketStatus {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, EnumIter, DeriveActiveEnum, Serialize, Deserialize, ToSchema)]
+#[derive(
+    Debug, PartialEq, Eq, Clone, EnumIter, DeriveActiveEnum, Serialize, Deserialize, ToSchema,
+)]
 #[non_exhaustive]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "sex")]
 pub enum Sex {

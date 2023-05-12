@@ -52,6 +52,7 @@ pub struct PagingRequest {
         PagingRequest,
         entity::user::GetUser,
         entity::user::NewUser,
+        entity::user::UpdateUser,
         entity::book::Model,
         entity::book::UpdateBook,
         entity::order_list::GetOrder,

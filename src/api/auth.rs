@@ -1,5 +1,5 @@
 use crate::contants::user_type;
-use crate::utils::errors::{bad_request, conflict, iam_a_teapot, not_found, AError};
+use crate::utils::errors::{bad_request, conflict, forbidden, iam_a_teapot, not_found, AError};
 use crate::utils::jwt::{
     gen_secret_key, issue_acc_ref_token, AllowAdmin, AllowRefresh, AllowSuperAdmin, JwtClaims,
 };
@@ -17,12 +17,12 @@ use actix_web::{
 };
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
-use entity::user::{self, GetUser, NewUser};
+use entity::user::{self, GetUser, NewUser, UpdateUser};
 use once_cell::sync::Lazy;
 use rand::rngs::OsRng;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel, QueryFilter,
-    Set,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, IntoActiveModel,
+    QueryFilter, Set,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -39,6 +39,11 @@ pub struct LoginRequest {
 pub struct JwtToken {
     pub access_token: String,
     pub refresh_token: String,
+}
+
+fn to_salted_password(password: &String) -> Result<String, argon2::password_hash::Error> {
+    let salt = SaltString::generate(&mut OsRng);
+    Ok(ARGON.hash_password(password.as_bytes(), &salt)?.to_string())
 }
 
 #[p(
@@ -65,9 +70,11 @@ pub async fn login(
         )
         .map_or_else(
             |err| match err {
+                // 密码错误转换为响应
                 argon2::password_hash::Error::Password => {
                     Err(AError::from(iam_a_teapot("Invalid credentials")))
                 }
+                // 其他错误视为服务器错误
                 e => Err(e.into()),
             },
             |_| Ok(()),
@@ -148,10 +155,7 @@ pub async fn register(
     }
     let mut info = info.into_inner();
     // 密码加盐
-    let salt = SaltString::generate(&mut OsRng);
-    info.password_salt = ARGON
-        .hash_password(info.password_salt.as_bytes(), &salt)?
-        .to_string();
+    info.password_salt = to_salted_password(&info.password_salt)?;
     // 初始化 Secret Key
     let mut active_info = info.into_active_model();
     active_info.secret_key = Set(gen_secret_key(None));
@@ -190,8 +194,22 @@ pub async fn get_self(auth: APermission<JwtClaims, AllowAdmin>) -> AResult<AJson
     ),
 )]
 #[get("/user/{id}")]
-pub async fn get_user(id: Path<i32>, _req: HttpRequest) -> AResult<AJson<GetUser>> {
-    todo!()
+pub async fn get_user(
+    id: Path<i32>,
+    auth: APermission<JwtClaims, AllowAdmin>,
+    db: Data<DatabaseConnection>,
+) -> AResult<AJson<GetUser>> {
+    let id = id.into_inner();
+    // 只有自己或超级管理员才能获取用户信息
+    if auth.auth_info.role != user_type::SUPER_ADMIN && auth.auth_info.id != id {
+        Err(forbidden("Permission denied").into())
+    } else {
+        let user = user::Entity::find_by_id(id)
+            .one(db.as_ref())
+            .await?
+            .ok_or_else(|| not_found("User not found"))?;
+        Ok(AJson(user.into()))
+    }
 }
 
 #[p(
@@ -204,10 +222,28 @@ pub async fn get_user(id: Path<i32>, _req: HttpRequest) -> AResult<AJson<GetUser
 #[patch("/user/{id}")]
 pub async fn update_user(
     id: Path<i32>,
-    info: AJson<NewUser>,
-    _req: HttpRequest,
+    mut info: AJson<UpdateUser>,
+    auth: APermission<JwtClaims, AllowAdmin>,
+    db: Data<DatabaseConnection>,
 ) -> AResult<AJson<GetUser>> {
-    todo!()
+    let id = id.into_inner();
+    // 只有自己或超级管理员才能修改用户信息
+    if auth.auth_info.role != user_type::SUPER_ADMIN && auth.auth_info.id != id {
+        Err(forbidden("Permission denied").into())
+    } else {
+        if let Some(ref password) = info.password_salt {
+            // 如果有密码，需要给密码加盐
+            info.password_salt = Some(to_salted_password(password)?);
+        }
+        let mut info = info.into_inner().into_active_model();
+        info.id = Set(id);
+        let result = info.update(db.as_ref()).await;
+        match result {
+            Ok(user) => Ok(AJson(user.into())),
+            Err(DbErr::RecordNotFound(_)) => Err(not_found("User not found").into()),
+            Err(e) => Err(e.into()),
+        }
+    }
 }
 
 #[p(
