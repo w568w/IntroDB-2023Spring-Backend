@@ -92,6 +92,9 @@ where
             Ok(data) => Either::Right(PermissionExtractFunc {
                 data,
                 fut: E::from_request(req, payload),
+                check_fn: None,
+                status: 0,
+                info: None,
             }),
             Err(err) => Either::Left(ready(Err(internal_server_error(format!(
                 "Failed to extract data from request: {:?}",
@@ -109,7 +112,11 @@ where
 {
     #[pin]
     fut: E::Future,
+    #[pin]
+    check_fn: Option<Pin<Box<T::Future>>>,
     data: Data<T::AppData>,
+    status: u8,
+    info: Option<E>,
 }
 
 impl<E, T> Future for PermissionExtractFunc<E, T>
@@ -120,15 +127,29 @@ where
     type Output = Result<APermission<E, T>, <APermission<E, T> as FromRequest>::Error>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
-        let this = self.project();
-        let result = this.fut.poll(cx);
-        match result {
-            Poll::Ready(Ok(info)) => {
-                let mut check_fn = Box::pin(T::check_permission(this.data.clone(), &info));
-                let permitted = Pin::as_mut(&mut check_fn).poll(cx);
+        let mut this = self.project();
+        match this.status {
+            0 => {
+                let result = this.fut.poll(cx);
+                match result {
+                    Poll::Ready(Ok(info)) => {
+                        this.info.replace(info);
+                        *this.status = 1;
+                        this.check_fn.replace(Box::pin(T::check_permission(
+                            this.data.clone(),
+                            this.info.as_ref().unwrap(),
+                        )));
+                        Poll::Pending
+                    }
+                    Poll::Ready(Err(e)) => Poll::Ready(Err(e.into())),
+                    Poll::Pending => Poll::Pending,
+                }
+            }
+            1 => {
+                let permitted = this.check_fn.as_pin_mut().unwrap().poll(cx);
                 match permitted {
                     Poll::Ready(Ok(Some(auth_info))) => Poll::Ready(Ok(APermission {
-                        extracted_info: info,
+                        extracted_info: this.info.take().unwrap(),
                         auth_info,
                     })),
                     Poll::Ready(Ok(None)) => Poll::Ready(Err(forbidden("Permission denied"))),
@@ -136,8 +157,7 @@ where
                     Poll::Pending => Poll::Pending,
                 }
             }
-            Poll::Ready(Err(e)) => Poll::Ready(Err(e.into())),
-            Poll::Pending => Poll::Pending,
+            _ => unreachable!(),
         }
     }
 }

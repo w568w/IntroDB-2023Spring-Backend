@@ -141,7 +141,7 @@ fn order_list() -> TableCreateStatement {
             ColumnDef::new(OrderList::Id)
                 .integer()
                 .not_null()
-                .primary_key(),
+                .primary_key().auto_increment(),
         )
         .col(ColumnDef::new(OrderList::TotalPrice).float().not_null())
         .col(ColumnDef::new(OrderList::TotalCount).integer().not_null())
@@ -164,7 +164,7 @@ fn transaction() -> TableCreateStatement {
             ColumnDef::new(Transaction::Id)
                 .big_integer()
                 .not_null()
-                .primary_key(),
+                .primary_key().auto_increment(),
         )
         .col(
             ColumnDef::new(Transaction::CreatedAt)
@@ -179,7 +179,7 @@ fn transaction() -> TableCreateStatement {
 fn user() -> TableCreateStatement {
     Table::create()
         .table(User::Table)
-        .col(ColumnDef::new(User::Id).integer().not_null().primary_key())
+        .col(ColumnDef::new(User::Id).integer().not_null().primary_key().auto_increment())
         .col(ColumnDef::new(User::PasswordSalt).string().not_null())
         .col(ColumnDef::new(User::SecretKey).string().not_null())
         .col(ColumnDef::new(User::Role).string().not_null())

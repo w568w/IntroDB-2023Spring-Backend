@@ -28,6 +28,7 @@ pub struct PagingRequest {
         auth::register,
         auth::get_users,
         auth::get_self,
+        auth::get_user,
         auth::update_user,
         auth::delete_user,
         books::get_books,
@@ -72,6 +73,7 @@ pub fn configure() -> impl FnOnce(&mut ServiceConfig) {
             .service(auth::register)
             .service(auth::get_users)
             .service(auth::get_self)
+            .service(auth::get_user)
             .service(auth::update_user)
             .service(auth::delete_user)
             .service(books::get_books)
