@@ -22,12 +22,8 @@ use super::{
     permission::{self, CheckPermission},
 };
 
-fn sys_jwt_secret() -> EncodingKey {
-    EncodingKey::from_secret(
-        env::var(JWT_SECRET)
-            .expect("Cannot get JWT secret key from environment variable")
-            .as_bytes(),
-    )
+fn sys_jwt_secret() -> String {
+    env::var(JWT_SECRET).expect("Cannot get JWT secret key from environment variable")
 }
 
 pub fn gen_secret_key(different_from: Option<String>) -> String {
@@ -83,7 +79,11 @@ impl TryInto<String> for JwtClaims {
     type Error = jsonwebtoken::errors::Error;
 
     fn try_into(self) -> Result<String, Self::Error> {
-        encode(&Header::default(), &self, &sys_jwt_secret())
+        encode(
+            &Header::default(),
+            &self,
+            &EncodingKey::from_secret(sys_jwt_secret().as_bytes()),
+        )
     }
 }
 
@@ -118,7 +118,7 @@ impl FromRequest for JwtClaims {
             .and_then(|token| {
                 decode::<JwtClaims>(
                     token,
-                    &DecodingKey::from_secret("secret".as_ref()),
+                    &DecodingKey::from_secret(sys_jwt_secret().as_bytes()),
                     &Validation::default(),
                 )
                 .ok()
