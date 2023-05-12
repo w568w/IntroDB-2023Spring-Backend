@@ -13,6 +13,8 @@ use utoipa::ToSchema;
 pub enum TicketStatus {
     #[sea_orm(string_value = "Pending")]
     Pending,
+    #[sea_orm(string_value = "StockPaid")]
+    StockPaid,
     #[sea_orm(string_value = "Done")]
     Done,
     #[sea_orm(string_value = "Revoked")]

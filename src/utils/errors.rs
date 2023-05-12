@@ -4,15 +4,80 @@ use std::fmt::Display;
 
 use actix_web::{
     http::{header, StatusCode},
-    HttpResponseBuilder, ResponseError,
+    HttpResponseBuilder,  ResponseError,
 };
 
 use crate::api::GeneralResponse;
+
+pub type AResult<T> = Result<T, AError>;
+
+#[derive(Debug)]
+#[repr(transparent)]
+pub struct AError(actix_web::Error);
+
+impl From<actix_web::Error> for AError {
+    fn from(err: actix_web::Error) -> Self {
+        Self(err)
+    }
+}
+
+impl From<Error> for AError {
+    fn from(err: Error) -> Self {
+        Self(err.into())
+    }
+}
+
+impl Display for AError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl Into<actix_web::Error> for AError {
+    fn into(self) -> actix_web::Error {
+        self.0
+    }
+}
+
+impl<T: Into<Error>> From<T> for AError {
+    default fn from(err: T) -> Self {
+        Self::from(T::into(err))
+    }
+}
+
+
 
 #[derive(Debug)]
 pub struct Error {
     pub status: StatusCode,
     pub message: String,
+}
+
+impl From<sea_orm::DbErr> for Error {
+    fn from(err: sea_orm::DbErr) -> Self {
+        Self {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            message: err.to_string(),
+        }
+    }
+}
+
+impl From<argon2::password_hash::Error> for Error {
+    fn from(err: argon2::password_hash::Error) -> Self {
+        Self {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            message: err.to_string(),
+        }
+    }
+}
+
+impl From<jsonwebtoken::errors::Error> for Error {
+    fn from(err: jsonwebtoken::errors::Error) -> Self {
+        Self {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            message: err.to_string(),
+        }
+    }
 }
 
 impl Display for Error {
@@ -51,6 +116,8 @@ macro_rules! error {
 }
 
 error!(bad_request, BAD_REQUEST);
+error!(conflict, CONFLICT);
+error!(iam_a_teapot, IM_A_TEAPOT);
 error!(unauthorized, UNAUTHORIZED);
 error!(forbidden, FORBIDDEN);
 error!(not_found, NOT_FOUND);

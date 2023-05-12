@@ -2,27 +2,61 @@
 name = "db-midpj"
 version = "0.1.0"
 edition = "2021"
+publish = false
 
 [workspace]
-members = [".", "entity"]
+members = [".", "entity", "migration"]
 
 [workspace.dependencies]
 # 跨 Package 的依赖。各个 Package 只需要在 Cargo.toml 中声明依赖 { workspace = true } 即可。
+
+# ORM 框架
 sea-orm = { version = "^0.11", features = [
     "sqlx-mysql",
     "runtime-actix-native-tls",
     "macros",
 ] }
+sea-orm-migration = "^0.11"
+# 序列化/反序列化
 serde = { version = "^1.0", features = ["derive"] }
+serde_repr = "^0.1"
+# OpenAPI 生成
 utoipa = { version = "^3", features = ["actix_extras", "chrono"] }
+# 日志输出
+env_logger = "^0.10"
+log = "^0.4"
+# 随机字符串
+rand = "^0.8"
+# 时间
+chrono = "^0.4"
+# 懒初始化
+once_cell = "^1.8"
 
 [dependencies]
+# 子 Packages
 entity = { path = "entity" }
+migration = { path = "migration" }
+# 服务器框架
 actix-web = "^4"
+# 安全的 Pin 投影实现
 pin-project = "^1"
+# JWT 解析
 jsonwebtoken = "^8"
+# 支持两者的类型
 either = "^1"
-utoipa = { workspace = true }
+# 读取 .env 文件
+dotenv = "^0.15"
+# Argon2 密码哈希
+argon2 = "^0.5"
+# Swagger 托管
 utoipa-swagger-ui = { version = "^3", features = ["actix-web"] }
+
+utoipa = { workspace = true }
 sea-orm = { workspace = true }
 serde = { workspace = true }
+serde_repr = { workspace = true }
+env_logger = { workspace = true }
+log = { workspace = true }
+rand = { workspace = true }
+chrono = { workspace = true }
+once_cell = { workspace = true }

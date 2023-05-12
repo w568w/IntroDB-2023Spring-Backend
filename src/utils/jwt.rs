@@ -1,18 +1,106 @@
-use std::{future::Future, pin::Pin};
+use std::{env, future::Future, pin::Pin};
 
 use actix_web::{web::Data, FromRequest};
+use chrono::Utc;
 use entity::user;
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use rand::{distributions::Alphanumeric, rngs::OsRng, Rng};
 use sea_orm::{DatabaseConnection, EntityTrait};
 use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 
-use super::{permission::CheckPermission, errors::{unauthorized, internal_server_error, not_found}};
+use crate::{
+    api::auth::JwtToken,
+    contants::{
+        envs::JWT_SECRET, user_type, ACCESS_TOKEN_EXPIRE_SECONDS, ISSUER,
+        REFRESH_TOKEN_EXPIRE_SECONDS, SECRET_KEY_LENGTH,
+    },
+};
 
-#[derive(Debug, Serialize, Deserialize)]
+use super::{
+    errors::{internal_server_error, not_found, unauthorized},
+    permission::{self, CheckPermission},
+};
+
+fn sys_jwt_secret() -> EncodingKey {
+    EncodingKey::from_secret(
+        env::var(JWT_SECRET)
+            .expect("Cannot get JWT secret key from environment variable")
+            .as_bytes(),
+    )
+}
+
+pub fn gen_secret_key(different_from: Option<String>) -> String {
+    loop {
+        let key = OsRng
+            .sample_iter(&Alphanumeric)
+            .take(SECRET_KEY_LENGTH)
+            .map(char::from)
+            .collect();
+        if different_from.is_none() || &key != different_from.as_ref().unwrap() {
+            return key;
+        }
+    }
+}
+
+pub fn issue_acc_ref_token(
+    user_id: i32,
+    secret_key: String,
+) -> Result<JwtToken, jsonwebtoken::errors::Error> {
+    Ok(JwtToken {
+        access_token: issue_token(
+            user_id,
+            secret_key.clone(),
+            TokenType::Access,
+            ACCESS_TOKEN_EXPIRE_SECONDS,
+        )?,
+        refresh_token: issue_token(
+            user_id,
+            secret_key,
+            TokenType::Refresh,
+            REFRESH_TOKEN_EXPIRE_SECONDS,
+        )?,
+    })
+}
+
+pub fn issue_token(
+    user_id: i32,
+    secret_key: String,
+    token_type: TokenType,
+    expire_period: i64,
+) -> Result<String, jsonwebtoken::errors::Error> {
+    JwtClaims {
+        exp: Utc::now().timestamp() + expire_period,
+        iss: ISSUER.to_owned(),
+        user_id,
+        secret_key,
+        typ: token_type,
+    }
+    .try_into()
+}
+
+impl TryInto<String> for JwtClaims {
+    type Error = jsonwebtoken::errors::Error;
+
+    fn try_into(self) -> Result<String, Self::Error> {
+        encode(&Header::default(), &self, &sys_jwt_secret())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JwtClaims {
-    pub exp: usize,
+    pub exp: i64,
     pub iss: String,
     pub user_id: i32,
+    pub secret_key: String,
+    pub typ: TokenType,
+}
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
+#[repr(u8)]
+pub enum TokenType {
+    Access = 0,
+    Refresh = 1,
 }
 
 impl FromRequest for JwtClaims {
@@ -36,6 +124,13 @@ impl FromRequest for JwtClaims {
                 .ok()
             })
             .map(|data| data.claims);
+
+        if let Some(ref token) = token {
+            // 验证 token 是否过期
+            if token.exp < Utc::now().timestamp() {
+                return std::future::ready(Err(unauthorized("Token expired")));
+            }
+        }
         std::future::ready(match token {
             Some(token) => Ok(token),
             None => Err(unauthorized("Missing or bad token")),
@@ -44,7 +139,7 @@ impl FromRequest for JwtClaims {
 }
 
 trait JwtValidator {
-    fn validate(model: &user::Model) -> bool;
+    fn validate(model: &user::Model, permission: &JwtClaims) -> bool;
 }
 
 impl<T> CheckPermission for T
@@ -59,14 +154,19 @@ where
         db: Data<DatabaseConnection>,
         permission: &Self::Authentication,
     ) -> Self::Future {
-        let user_id = permission.user_id;
+        let permission = permission.clone();
         Box::pin(async move {
-            let this_user = user::Entity::find_by_id(user_id)
+            let this_user = user::Entity::find_by_id(permission.user_id)
                 .one(db.as_ref())
                 .await
                 .map_err(internal_server_error)?
                 .ok_or_else(|| not_found("The user does not exist"))?;
-            if Self::validate(&this_user) {
+
+            // 验证 Secret Key 是否匹配
+            if this_user.secret_key != permission.secret_key {
+                return Err(unauthorized("Invalid secret key"));
+            }
+            if Self::validate(&this_user, &permission) {
                 Ok(Some(this_user))
             } else {
                 Ok(None)
@@ -75,16 +175,23 @@ where
     }
 }
 
+pub struct AllowRefresh;
+impl JwtValidator for AllowRefresh {
+    fn validate(_: &user::Model, permission: &JwtClaims) -> bool {
+        permission.typ == TokenType::Refresh
+    }
+}
+
 pub struct AllowAdmin;
 impl JwtValidator for AllowAdmin {
-    fn validate(model: &user::Model) -> bool {
-        model.role == "admin" || AllowSuperAdmin::validate(model)
+    fn validate(model: &user::Model, permission: &JwtClaims) -> bool {
+        model.role == user_type::ADMIN || AllowSuperAdmin::validate(model, permission)
     }
 }
 
 pub struct AllowSuperAdmin;
 impl JwtValidator for AllowSuperAdmin {
-    fn validate(model: &user::Model) -> bool {
-        model.role == "super_admin"
+    fn validate(model: &user::Model, _: &JwtClaims) -> bool {
+        model.role == user_type::SUPER_ADMIN
     }
 }

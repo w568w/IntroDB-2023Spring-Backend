@@ -41,8 +41,8 @@ where
     Extractor: FromRequest,
     Checker: CheckPermission<Authentication = Extractor>,
 {
-    extracted_info: Extractor,
-    auth_info: Checker::Output,
+    pub extracted_info: Extractor,
+    pub auth_info: Checker::Output,
 }
 
 /// A FromRequest trait for Data<T> that has special handling for empty type `Data<()>`.

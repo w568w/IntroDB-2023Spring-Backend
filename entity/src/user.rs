@@ -13,11 +13,9 @@ pub struct Model {
     // 身份验证
     // - 密码使用 bcrypt 算法加盐储存
     pub password_salt: String,
-    // - JWToken
-    pub refresh_token: String,
-    pub access_token: String,
+    // - JWToken Key
+    pub secret_key: String,
     // 个人信息
-    pub name: String,
     pub role: String,
     pub real_name: String,
     pub sex: Sex,
@@ -44,9 +42,6 @@ impl ActiveModelBehavior for ActiveModel {}
 #[fromsuper(from_type = "Model")]
 pub struct GetUser {
     pub id: i32,
-    pub access_token: String,
-    pub refresh_token: String,
-    pub name: String,
     pub role: String,
     pub real_name: String,
     pub sex: Sex,
@@ -55,7 +50,6 @@ pub struct GetUser {
 #[derive(ToSchema, DeriveIntoActiveModel, Deserialize)]
 pub struct NewUser {
     pub password_salt: String,
-    pub name: String,
     pub role: String,
     pub real_name: String,
     pub sex: Sex,
