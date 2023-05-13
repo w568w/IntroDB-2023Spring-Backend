@@ -6,6 +6,7 @@ pub mod user_type{
 pub mod envs{
     pub const DB_URL: &str = "DB_URL";
     pub const JWT_SECRET: &str = "JWT_SECRET";
+    pub const ALLOW_ALL_CORS: &str = "ALLOW_ALL_CORS";
 
 }
 pub const SECRET_KEY_LENGTH: usize = 32;

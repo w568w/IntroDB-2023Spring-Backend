@@ -122,6 +122,4 @@ error!(unauthorized, UNAUTHORIZED);
 error!(forbidden, FORBIDDEN);
 error!(not_found, NOT_FOUND);
 error!(internal_server_error, INTERNAL_SERVER_ERROR);
-error!(bad_gateway, BAD_GATEWAY);
 error!(service_unavailable, SERVICE_UNAVAILABLE);
-error!(gateway_timeout, GATEWAY_TIMEOUT);

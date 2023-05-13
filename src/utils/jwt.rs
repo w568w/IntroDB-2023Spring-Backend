@@ -19,7 +19,7 @@ use crate::{
 
 use super::{
     errors::{internal_server_error, not_found, unauthorized},
-    permission::{self, CheckPermission},
+    permission::CheckPermission,
 };
 
 fn sys_jwt_secret() -> String {

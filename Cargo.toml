@@ -38,6 +38,8 @@ entity = { path = "entity" }
 migration = { path = "migration" }
 # 服务器框架
 actix-web = "^4"
+# CORS 扩展
+actix-cors = "^0.6"
 # 安全的 Pin 投影实现
 pin-project = "^1"
 # JWT 解析
