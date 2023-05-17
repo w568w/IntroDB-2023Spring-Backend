@@ -237,12 +237,7 @@ pub async fn update_user(
         }
         let mut info = info.into_inner().into_active_model();
         info.id = Set(id);
-        let result = info.update(db.as_ref()).await;
-        match result {
-            Ok(user) => Ok(AJson(user.into())),
-            Err(DbErr::RecordNotFound(_)) => Err(not_found("User not found").into()),
-            Err(e) => Err(e.into()),
-        }
+        Ok(AJson(info.update(db.as_ref()).await?.into()))
     }
 }
 

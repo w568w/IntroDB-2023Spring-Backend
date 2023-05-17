@@ -4,7 +4,7 @@ use std::fmt::Display;
 
 use actix_web::{
     http::{header, StatusCode},
-    HttpResponseBuilder,  ResponseError,
+    HttpResponseBuilder, ResponseError,
 };
 
 use crate::api::GeneralResponse;
@@ -45,8 +45,6 @@ impl<T: Into<Error>> From<T> for AError {
     }
 }
 
-
-
 #[derive(Debug)]
 pub struct Error {
     pub status: StatusCode,
@@ -55,9 +53,15 @@ pub struct Error {
 
 impl From<sea_orm::DbErr> for Error {
     fn from(err: sea_orm::DbErr) -> Self {
-        Self {
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            message: err.to_string(),
+        match err {
+            sea_orm::DbErr::RecordNotFound(_) => Self {
+                status: StatusCode::NOT_FOUND,
+                message: err.to_string(),
+            },
+            _ => Self {
+                status: StatusCode::INTERNAL_SERVER_ERROR,
+                message: err.to_string(),
+            },
         }
     }
 }

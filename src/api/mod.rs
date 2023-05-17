@@ -15,8 +15,8 @@ pub struct GeneralResponse {
 
 #[derive(Deserialize, ToSchema)]
 pub struct PagingRequest {
-    pub page: u32,
-    pub page_size: u32,
+    pub page: u64,
+    pub page_size: u64,
 }
 
 #[derive(OpenApi)]
@@ -48,6 +48,7 @@ pub struct PagingRequest {
     components(schemas(
         auth::LoginRequest,
         auth::JwtToken,
+        books::BookFilter,
         orders::PutOnShelfRequest,
         GeneralResponse,
         PagingRequest,
