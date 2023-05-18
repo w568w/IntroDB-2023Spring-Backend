@@ -40,6 +40,7 @@ pub struct BookFilter {
     responses(
         (status = OK, description = "Get books successful", body = [Model])
     ),
+    security(("jwt_token" = []))
 )]
 #[get("/book")]
 pub async fn get_books(
@@ -70,7 +71,8 @@ pub async fn get_books(
     request_body = UpdateBook,
     responses(
         (status = OK, description = "Update book successful", body = Model),
-    )
+    ),
+    security(("jwt_token" = []))
 )]
 #[patch("/book/{isbn}")]
 pub async fn update_book(
@@ -108,6 +110,8 @@ pub async fn put_on_shelf(
         .ok_or_else(|| not_found("Book not found"))?;
     if book.inventory_count < info.put_count {
         Err(unprocessable_entity("Inventory count is not enough").into())
+    } else if book.on_shelf_count + info.put_count < 0 {
+        Err(unprocessable_entity("On shelf count is not enough").into())
     } else {
         let old_inventory_count = book.inventory_count;
         let old_shelf_count = book.on_shelf_count;

@@ -67,6 +67,7 @@ pub async fn revoke_sell(id: Path<i32>) -> AResult<AJson<GetOrder>> {
     responses(
         (status = OK, description = "Stock book successfully", body = GetOrder),
     ),
+    security(("jwt_token" = []))
 )]
 #[post("/stock")]
 pub async fn stock_book(
@@ -106,6 +107,7 @@ pub async fn stock_book(
     responses(
         (status = OK, description = "Get stock list successfully", body = [GetOrder]),
     ),
+    security(("jwt_token" = []))
 )]
 #[get("/stock")]
 pub async fn get_stock_list(
@@ -129,6 +131,7 @@ pub async fn get_stock_list(
     responses(
         (status = OK, description = "We pay for the book successfully", body = GetOrder),
     ),
+    security(("jwt_token" = []))
 )]
 #[post("/stock/{id}/pay")]
 pub async fn pay_stock(
@@ -158,6 +161,7 @@ pub async fn pay_stock(
     responses(
         (status = OK, description = "We revoke the order successfully", body = GetOrder),
     ),
+    security(("jwt_token" = []))
 )]
 #[post("/stock/{id}/revoke")]
 pub async fn revoke_stock(
@@ -181,6 +185,7 @@ pub async fn revoke_stock(
     responses(
         (status = OK, description = "We confirm the order successfully", body = GetOrder),
     ),
+    security(("jwt_token" = []))
 )]
 #[post("/stock/{id}/confirm")]
 pub async fn confirm_stock(

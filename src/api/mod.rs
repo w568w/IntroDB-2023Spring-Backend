@@ -1,6 +1,10 @@
 use actix_web::web::ServiceConfig;
 use serde::{Deserialize, Serialize};
-use utoipa::{OpenApi, ToSchema, IntoParams};
+use serde_with::{serde_as, DisplayFromStr};
+use utoipa::{
+    openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
+    IntoParams, Modify, OpenApi, ToSchema,
+};
 
 pub mod auth;
 pub mod books;
@@ -13,9 +17,14 @@ pub struct GeneralResponse {
     pub message: String,
 }
 
+#[serde_as]
 #[derive(Deserialize, ToSchema, IntoParams)]
 pub struct PagingRequest {
+    // 从字符串解析数据类型，是Query中无法使用#[serde(flatten)]的临时解决方案
+    // 见 https://docs.rs/serde_qs/latest/serde_qs/index.html#flatten-workaround。
+    #[serde_as(as = "DisplayFromStr")]
     pub page: u64,
+    #[serde_as(as = "DisplayFromStr")]
     pub page_size: u64,
 }
 
@@ -62,9 +71,27 @@ pub struct PagingRequest {
         entity::transaction::GetTransaction,
         entity::TicketStatus,
         entity::Sex,
-    ))
+    )),
+    modifiers(&SecurityAddon)
 )]
 pub struct ApiDoc;
+
+struct SecurityAddon;
+
+impl Modify for SecurityAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        let components = openapi.components.as_mut().unwrap(); // we can unwrap safely since it is already a registered component.
+        components.add_security_scheme(
+            "jwt_token",
+            SecurityScheme::Http(
+                HttpBuilder::new()
+                    .scheme(HttpAuthScheme::Bearer)
+                    .bearer_format("JWT")
+                    .build(),
+            ),
+        )
+    }
+}
 
 pub fn configure() -> impl FnOnce(&mut ServiceConfig) {
     move |app: &mut ServiceConfig| {

@@ -20,6 +20,7 @@ sea-orm-migration = "^0.11"
 # 序列化/反序列化
 serde = { version = "^1.0", features = ["derive"] }
 serde_repr = "^0.1"
+serde_with = "^3"
 # OpenAPI 生成
 utoipa = { version = "^3", features = ["actix_extras", "chrono"] }
 # 日志输出
@@ -57,6 +58,7 @@ utoipa = { workspace = true }
 sea-orm = { workspace = true }
 serde = { workspace = true }
 serde_repr = { workspace = true }
+serde_with = { workspace = true }
 env_logger = { workspace = true }
 log = { workspace = true }
 rand = { workspace = true }

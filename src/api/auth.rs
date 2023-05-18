@@ -89,6 +89,7 @@ pub async fn login(
         (status = OK, description = "Refresh successful", body = JwtToken),
         (status = UNAUTHORIZED, description = "Invalid credentials"),
     ),
+    security(("jwt_token" = []))
 )]
 #[post("/user/refresh")]
 pub async fn refresh(auth: APermission<JwtClaims, AllowRefresh>) -> AResult<AJson<JwtToken>> {
@@ -103,6 +104,7 @@ pub async fn refresh(auth: APermission<JwtClaims, AllowRefresh>) -> AResult<AJso
         (status = OK, description = "Logout successful", body = GeneralResponse),
         (status = UNAUTHORIZED, description = "Invalid credentials"),
     ),
+    security(("jwt_token" = []))
 )]
 #[post("/user/logout")]
 pub async fn logout(
@@ -124,6 +126,7 @@ pub async fn logout(
         (status = BAD_REQUEST, description = "Invalid credentials", body = GeneralResponse),
         (status = CONFLICT, description = "User already exists", body = GeneralResponse),
     ),
+    security(("jwt_token" = []))
 )]
 #[post("/user/register")]
 pub async fn register(
@@ -182,6 +185,7 @@ pub async fn get_users(
     responses(
         (status = OK, description = "Get self successful", body = GetUser),
     ),
+    security(("jwt_token" = []))
 )]
 #[get("/user/me")]
 pub async fn get_self(auth: APermission<JwtClaims, AllowAdmin>) -> AResult<AJson<GetUser>> {
@@ -193,6 +197,7 @@ pub async fn get_self(auth: APermission<JwtClaims, AllowAdmin>) -> AResult<AJson
         (status = OK, description = "Get user successful", body = GetUser),
         (status = NOT_FOUND, description = "User not found", body = GeneralResponse),
     ),
+    security(("jwt_token" = []))
 )]
 #[get("/user/{id}")]
 pub async fn get_user(
@@ -220,6 +225,7 @@ pub async fn get_user(
         (status = BAD_REQUEST, description = "Invalid credentials", body = GeneralResponse),
         (status = NOT_FOUND, description = "User not found", body = GeneralResponse),
     ),
+    security(("jwt_token" = []))
 )]
 #[patch("/user/{id}")]
 pub async fn update_user(
