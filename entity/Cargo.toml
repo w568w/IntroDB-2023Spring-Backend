@@ -9,3 +9,4 @@ fromsuper = "^0.1"
 sea-orm = { workspace = true }
 serde = { workspace = true }
 utoipa = { workspace = true }
+chrono = { workspace = true }

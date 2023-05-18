@@ -1,8 +1,9 @@
+use crate::{book::NewBookInfo, TicketStatus};
+use chrono::offset::Utc;
 use fromsuper::FromSuper;
-use sea_orm::entity::prelude::*;
+use sea_orm::{entity::prelude::*, ActiveValue::NotSet, IntoActiveModel, Set};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use crate::TicketStatus;
 
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "order_list")]
@@ -32,15 +33,15 @@ pub struct Model {
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(
-    belongs_to = "super::book::Entity",
-    from = "Column::BookIsbn",
-    to = "super::book::Column::Isbn",
+        belongs_to = "super::book::Entity",
+        from = "Column::BookIsbn",
+        to = "super::book::Column::Isbn"
     )]
     Book,
     #[sea_orm(
-    belongs_to = "super::user::Entity",
-    from = "Column::OperatorId",
-    to = "super::user::Column::Id",
+        belongs_to = "super::user::Entity",
+        from = "Column::OperatorId",
+        to = "super::user::Column::Id"
     )]
     User,
 }
@@ -59,11 +60,28 @@ impl Related<super::user::Entity> for Entity {
 
 impl ActiveModelBehavior for ActiveModel {}
 
-#[derive(ToSchema, DeriveIntoActiveModel, Deserialize)]
+#[derive(ToSchema, Deserialize)]
 pub struct NewOrder {
     pub book_isbn: String,
     pub total_price: f32,
     pub total_count: i32,
+    #[serde(flatten)]
+    pub book: Option<NewBookInfo>,
+}
+
+impl NewOrder {
+    pub fn into_active_model(self, operator_id: i32) -> ActiveModel {
+        ActiveModel {
+            id: NotSet,
+            total_price: Set(self.total_price),
+            total_count: Set(self.total_count),
+            status: Set(TicketStatus::Pending),
+            created_at: Set(Utc::now().naive_utc()),
+            updated_at: Set(Utc::now().naive_utc()),
+            book_isbn: Set(self.book_isbn),
+            operator_id: Set(operator_id),
+        }
+    }
 }
 
 #[derive(FromSuper, ToSchema, Serialize)]

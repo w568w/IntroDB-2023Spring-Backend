@@ -157,7 +157,7 @@ where
         let permission = permission.clone();
         Box::pin(async move {
             let this_user = user::Entity::find_by_id(permission.user_id)
-                .one(db.as_ref())
+                .one(db.get_ref())
                 .await
                 .map_err(internal_server_error)?
                 .ok_or_else(|| not_found("The user does not exist"))?;

@@ -22,7 +22,7 @@ use once_cell::sync::Lazy;
 use rand::rngs::OsRng;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, IntoActiveModel,
-    QueryFilter, Set,
+    QueryFilter, Set, Unchanged,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -60,7 +60,7 @@ pub async fn login(
 ) -> AResult<AJson<JwtToken>> {
     // 验证用户存在及密码正确
     let user = user::Entity::find_by_id(creds.id)
-        .one(db.as_ref())
+        .one(db.get_ref())
         .await?
         .ok_or_else(|| not_found("User not found"))?;
     ARGON
@@ -111,7 +111,7 @@ pub async fn logout(
 ) -> AResult<AJson<GeneralResponse>> {
     let mut user = auth.auth_info.into_active_model();
     user.secret_key = Set(gen_secret_key(user.secret_key.take()));
-    user.update(db.as_ref()).await?;
+    user.update(db.get_ref()).await?;
     Ok(AJson(GeneralResponse {
         message: "Logout successful".to_string(),
     }))
@@ -145,7 +145,7 @@ pub async fn register(
             // 只有在无超级管理员的情况下才能创建超级管理员
             let su = user::Entity::find()
                 .filter(user::Column::Role.eq(user_type::SUPER_ADMIN))
-                .one(db.as_ref())
+                .one(db.get_ref())
                 .await?;
             if su.is_some() {
                 return Err(conflict("Super admin already exists").into());
@@ -160,11 +160,12 @@ pub async fn register(
     let mut active_info = info.into_active_model();
     active_info.secret_key = Set(gen_secret_key(None));
     // 储存用户
-    let user = active_info.insert(db.as_ref()).await?;
+    let user = active_info.insert(db.get_ref()).await?;
     Ok(AJson(user.into()))
 }
 
 #[p(
+    params(PagingRequest),
     responses(
         (status = OK, description = "Get users successful", body = [GetUser])
     ),
@@ -205,7 +206,7 @@ pub async fn get_user(
         Err(forbidden("Permission denied").into())
     } else {
         let user = user::Entity::find_by_id(id)
-            .one(db.as_ref())
+            .one(db.get_ref())
             .await?
             .ok_or_else(|| not_found("User not found"))?;
         Ok(AJson(user.into()))
@@ -213,6 +214,7 @@ pub async fn get_user(
 }
 
 #[p(
+    request_body = UpdateUser,
     responses(
         (status = OK, description = "Update user successful", body = GetUser),
         (status = BAD_REQUEST, description = "Invalid credentials", body = GeneralResponse),
@@ -236,8 +238,8 @@ pub async fn update_user(
             info.password_salt = Some(to_salted_password(password)?);
         }
         let mut info = info.into_inner().into_active_model();
-        info.id = Set(id);
-        Ok(AJson(info.update(db.as_ref()).await?.into()))
+        info.id = Unchanged(id);
+        Ok(AJson(info.update(db.get_ref()).await?.into()))
     }
 }
 

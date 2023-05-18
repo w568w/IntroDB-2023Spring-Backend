@@ -1,6 +1,6 @@
 use actix_web::web::ServiceConfig;
 use serde::{Deserialize, Serialize};
-use utoipa::{OpenApi, ToSchema};
+use utoipa::{OpenApi, ToSchema, IntoParams};
 
 pub mod auth;
 pub mod books;
@@ -13,7 +13,7 @@ pub struct GeneralResponse {
     pub message: String,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema, IntoParams)]
 pub struct PagingRequest {
     pub page: u64,
     pub page_size: u64,
@@ -33,6 +33,7 @@ pub struct PagingRequest {
         auth::delete_user,
         books::get_books,
         books::update_book,
+        books::put_on_shelf,
         orders::sell_book,
         orders::get_sell_list,
         orders::pay_sell,
@@ -42,14 +43,12 @@ pub struct PagingRequest {
         orders::pay_stock,
         orders::revoke_stock,
         orders::confirm_stock,
-        orders::put_on_shelf,
         transactions::get_transaction_list,
     ),
     components(schemas(
         auth::LoginRequest,
         auth::JwtToken,
-        books::BookFilter,
-        orders::PutOnShelfRequest,
+        books::PutOnShelfRequest,
         GeneralResponse,
         PagingRequest,
         entity::user::GetUser,
@@ -57,6 +56,7 @@ pub struct PagingRequest {
         entity::user::UpdateUser,
         entity::book::Model,
         entity::book::UpdateBook,
+        entity::book::NewBookInfo,
         entity::order_list::GetOrder,
         entity::order_list::NewOrder,
         entity::transaction::GetTransaction,
@@ -79,6 +79,7 @@ pub fn configure() -> impl FnOnce(&mut ServiceConfig) {
             .service(auth::delete_user)
             .service(books::get_books)
             .service(books::update_book)
+            .service(books::put_on_shelf)
             .service(orders::sell_book)
             .service(orders::get_sell_list)
             .service(orders::pay_sell)
@@ -88,7 +89,6 @@ pub fn configure() -> impl FnOnce(&mut ServiceConfig) {
             .service(orders::pay_stock)
             .service(orders::revoke_stock)
             .service(orders::confirm_stock)
-            .service(orders::put_on_shelf)
             .service(transactions::get_transaction_list);
     }
 }

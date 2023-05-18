@@ -5,7 +5,7 @@ use utoipa::ToSchema;
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize, ToSchema)]
 #[sea_orm(table_name = "book")]
 pub struct Model {
-    #[sea_orm(primary_key)]
+    #[sea_orm(primary_key, auto_increment = false)]
     pub isbn: String,
     // 书籍信息
     pub title: String,
@@ -36,6 +36,14 @@ impl ActiveModelBehavior for ActiveModel {}
 
 #[derive(ToSchema, DeriveIntoActiveModel, Deserialize)]
 pub struct UpdateBook {
+    pub title: String,
+    pub author: String,
+    pub publisher: String,
+    pub out_price: f32,
+}
+
+#[derive(Clone, ToSchema, DeriveIntoActiveModel, Deserialize)]
+pub struct NewBookInfo {
     pub title: String,
     pub author: String,
     pub publisher: String,
