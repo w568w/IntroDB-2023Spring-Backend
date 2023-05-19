@@ -10,18 +10,18 @@ use super::preclude::*;
 use super::PagingRequest;
 use actix_web::web::Data;
 use actix_web::{
-    delete, get, patch, post,
+    get, patch, post,
     web::{Path, Query},
 };
 use entity::book::{Model, UpdateBook};
-use entity::user::{GetUser, NewUser};
+
 use sea_orm::Set;
 use sea_orm::Unchanged;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel, QueryFilter,
     QuerySelect,
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
@@ -45,7 +45,7 @@ pub struct BookFilter {
 #[get("/book")]
 pub async fn get_books(
     data: Query<BookFilter>,
-    auth: APermission<JwtClaims, AllowAdmin>,
+    _auth: APermission<JwtClaims, AllowAdmin>,
     db: Data<DatabaseConnection>,
 ) -> AResult<AJson<Vec<Model>>> {
     let mut query = entity::book::Entity::find();
@@ -77,7 +77,7 @@ pub async fn get_books(
 #[patch("/book/{isbn}")]
 pub async fn update_book(
     isbn: Path<String>,
-    auth: APermission<JwtClaims, AllowAdmin>,
+    _auth: APermission<JwtClaims, AllowAdmin>,
     book: AJson<UpdateBook>,
     db: Data<DatabaseConnection>,
 ) -> AResult<AJson<Model>> {

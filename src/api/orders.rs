@@ -1,25 +1,24 @@
-use crate::utils::errors::{bad_request, conflict, not_found, unprocessable_entity};
+use crate::utils::errors::{conflict, not_found, unprocessable_entity};
 use crate::utils::jwt::{AllowAdmin, JwtClaims};
 use crate::utils::permission::APermission;
 
 use super::preclude::*;
 
-use super::{GeneralResponse, PagingRequest};
+use super::{PagingRequest};
 use actix_web::web::Data;
 use actix_web::{
-    delete, get, patch, post,
+    get, post,
     web::{Path, Query},
-    HttpRequest, HttpResponse, Responder,
 };
-use entity::book::Model;
+
 use entity::order_list::{GetOrder, NewOrder};
-use entity::user::{GetUser, NewUser};
-use entity::{book, order_list, TicketStatus};
+
+use entity::{order_list, TicketStatus};
 use sea_orm::{
     ActiveModelTrait, ConnectionTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
     QuerySelect, Set, TransactionTrait,
 };
-use serde::{Deserialize, Serialize};
+
 use utoipa::ToSchema;
 
 #[p(
@@ -28,7 +27,7 @@ use utoipa::ToSchema;
     ),
 )]
 #[post("/sell")]
-pub async fn sell_book(book: AJson<NewOrder>) -> AResult<AJson<GetOrder>> {
+pub async fn sell_book(_book: AJson<NewOrder>) -> AResult<AJson<GetOrder>> {
     todo!()
 }
 
@@ -38,7 +37,7 @@ pub async fn sell_book(book: AJson<NewOrder>) -> AResult<AJson<GetOrder>> {
     ),
 )]
 #[get("/sell")]
-pub async fn get_sell_list(paging: Query<PagingRequest>) -> AResult<AJson<Vec<GetOrder>>> {
+pub async fn get_sell_list(_paging: Query<PagingRequest>) -> AResult<AJson<Vec<GetOrder>>> {
     todo!()
 }
 
@@ -48,7 +47,7 @@ pub async fn get_sell_list(paging: Query<PagingRequest>) -> AResult<AJson<Vec<Ge
     ),
 )]
 #[post("/sell/{id}/pay")]
-pub async fn pay_sell(id: Path<i32>) -> AResult<AJson<GetOrder>> {
+pub async fn pay_sell(_id: Path<i32>) -> AResult<AJson<GetOrder>> {
     todo!()
 }
 
@@ -58,7 +57,7 @@ pub async fn pay_sell(id: Path<i32>) -> AResult<AJson<GetOrder>> {
     ),
 )]
 #[post("/sell/{id}/revoke")]
-pub async fn revoke_sell(id: Path<i32>) -> AResult<AJson<GetOrder>> {
+pub async fn revoke_sell(_id: Path<i32>) -> AResult<AJson<GetOrder>> {
     todo!()
 }
 
@@ -112,7 +111,7 @@ pub async fn stock_book(
 #[get("/stock")]
 pub async fn get_stock_list(
     paging: Query<PagingRequest>,
-    auth: APermission<JwtClaims, AllowAdmin>,
+    _auth: APermission<JwtClaims, AllowAdmin>,
     db: Data<DatabaseConnection>,
 ) -> AResult<AJson<Vec<GetOrder>>> {
     Ok(AJson(
@@ -136,7 +135,7 @@ pub async fn get_stock_list(
 #[post("/stock/{id}/pay")]
 pub async fn pay_stock(
     id: Path<i32>,
-    auth: APermission<JwtClaims, AllowAdmin>,
+    _auth: APermission<JwtClaims, AllowAdmin>,
     db: Data<DatabaseConnection>,
 ) -> AResult<AJson<GetOrder>> {
     let trans = db.begin().await?;
@@ -166,7 +165,7 @@ pub async fn pay_stock(
 #[post("/stock/{id}/revoke")]
 pub async fn revoke_stock(
     id: Path<i32>,
-    auth: APermission<JwtClaims, AllowAdmin>,
+    _auth: APermission<JwtClaims, AllowAdmin>,
     db: Data<DatabaseConnection>,
 ) -> AResult<AJson<GetOrder>> {
     Ok(AJson(
@@ -190,7 +189,7 @@ pub async fn revoke_stock(
 #[post("/stock/{id}/confirm")]
 pub async fn confirm_stock(
     id: Path<i32>,
-    auth: APermission<JwtClaims, AllowAdmin>,
+    _auth: APermission<JwtClaims, AllowAdmin>,
     db: Data<DatabaseConnection>,
 ) -> AResult<AJson<GetOrder>> {
     let trans = db.begin().await?;

@@ -1,10 +1,9 @@
 use super::preclude::*;
 
-use super::{GeneralResponse, PagingRequest};
+use super::{PagingRequest};
 use actix_web::{
-    delete, get, patch, post,
-    web::{Path, Query},
-    HttpRequest, HttpResponse, Responder,
+    get,
+    web::{Query},
 };
 use entity::transaction::GetTransaction;
 
@@ -16,7 +15,7 @@ use entity::transaction::GetTransaction;
 )]
 #[get("/transaction")]
 pub async fn get_transaction_list(
-    paging: Query<PagingRequest>,
+    _paging: Query<PagingRequest>,
 ) -> AResult<AJson<Vec<GetTransaction>>> {
     todo!()
 }

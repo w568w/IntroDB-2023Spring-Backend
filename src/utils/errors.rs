@@ -33,9 +33,9 @@ impl Display for AError {
     }
 }
 
-impl Into<actix_web::Error> for AError {
-    fn into(self) -> actix_web::Error {
-        self.0
+impl From<AError> for actix_web::Error {
+    fn from(val: AError) -> Self {
+        val.0
     }
 }
 

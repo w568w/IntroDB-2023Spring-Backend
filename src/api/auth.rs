@@ -21,13 +21,13 @@ use entity::user::{self, GetUser, NewUser, UpdateUser};
 use once_cell::sync::Lazy;
 use rand::rngs::OsRng;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, IntoActiveModel,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
     QueryFilter, Set, Unchanged,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-static ARGON: Lazy<Argon2> = Lazy::new(|| Argon2::default());
+static ARGON: Lazy<Argon2> = Lazy::new(Argon2::default);
 
 #[derive(Deserialize, ToSchema)]
 pub struct LoginRequest {
@@ -175,7 +175,7 @@ pub async fn register(
 )]
 #[get("/user")]
 pub async fn get_users(
-    page: Query<PagingRequest>,
+    _page: Query<PagingRequest>,
     _req: HttpRequest,
 ) -> AResult<AJson<Vec<GetUser>>> {
     todo!()
@@ -256,6 +256,6 @@ pub async fn update_user(
     ),
 )]
 #[delete("/user/{id}")]
-pub async fn delete_user(id: Path<i32>, _req: HttpRequest) -> AResult<AJson<GeneralResponse>> {
+pub async fn delete_user(_id: Path<i32>, _req: HttpRequest) -> AResult<AJson<GeneralResponse>> {
     todo!()
 }
