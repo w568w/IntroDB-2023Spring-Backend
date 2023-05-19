@@ -1,5 +1,5 @@
 use fromsuper::FromSuper;
-use sea_orm::{entity::prelude::*, ActiveValue::NotSet, IntoActiveModel, Set};
+use sea_orm::{entity::prelude::*, ActiveValue::NotSet, IntoActiveModel};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 

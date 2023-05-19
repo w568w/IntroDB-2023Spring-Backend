@@ -19,8 +19,6 @@ use sea_orm::{
     QuerySelect, Set, TransactionTrait,
 };
 
-use utoipa::ToSchema;
-
 #[p(
     responses(
         (status = OK, description = "Book sold successfully", body = GetOrder),

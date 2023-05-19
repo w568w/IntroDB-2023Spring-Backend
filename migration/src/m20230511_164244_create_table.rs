@@ -1,4 +1,3 @@
-use entity::transaction;
 use sea_orm_migration::{prelude::*, sea_orm::TransactionTrait};
 
 #[derive(DeriveMigrationName)]

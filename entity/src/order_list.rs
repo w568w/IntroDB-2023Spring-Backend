@@ -1,7 +1,7 @@
 use crate::{book::NewBookInfo, TicketStatus};
 use chrono::offset::Utc;
 use fromsuper::FromSuper;
-use sea_orm::{entity::prelude::*, ActiveValue::NotSet, IntoActiveModel, Set};
+use sea_orm::{entity::prelude::*, ActiveValue::NotSet, Set};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 

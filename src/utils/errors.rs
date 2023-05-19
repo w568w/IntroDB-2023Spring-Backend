@@ -127,4 +127,3 @@ error!(unprocessable_entity, UNPROCESSABLE_ENTITY);
 error!(forbidden, FORBIDDEN);
 error!(not_found, NOT_FOUND);
 error!(internal_server_error, INTERNAL_SERVER_ERROR);
-error!(service_unavailable, SERVICE_UNAVAILABLE);
