@@ -5,12 +5,12 @@ use chrono::Utc;
 use entity::user;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use rand::{distributions::Alphanumeric, rngs::OsRng, Rng};
-use sea_orm::{DatabaseConnection, EntityTrait};
+use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
 use crate::{
-    api::auth::JwtToken,
+    api::auth::{JwtToken, find_user_by_id},
     contants::{
         envs::JWT_SECRET, user_type, ACCESS_TOKEN_EXPIRE_SECONDS, ISSUER,
         REFRESH_TOKEN_EXPIRE_SECONDS, SECRET_KEY_LENGTH,
@@ -18,7 +18,7 @@ use crate::{
 };
 
 use super::{
-    errors::{internal_server_error, not_found, unauthorized},
+    errors::{internal_server_error, unauthorized},
     permission::CheckPermission,
 };
 
@@ -156,11 +156,11 @@ where
     ) -> Self::Future {
         let permission = permission.clone();
         Box::pin(async move {
-            let this_user = user::Entity::find_by_id(permission.user_id)
+            let this_user = find_user_by_id(permission.user_id)
                 .one(db.get_ref())
                 .await
                 .map_err(internal_server_error)?
-                .ok_or_else(|| not_found("The user does not exist"))?;
+                .ok_or_else(|| unauthorized("The user does not exist"))?;
 
             // 验证 Secret Key 是否匹配
             if this_user.secret_key != permission.secret_key {

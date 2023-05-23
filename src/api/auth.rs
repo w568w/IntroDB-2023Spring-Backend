@@ -22,7 +22,7 @@ use once_cell::sync::Lazy;
 use rand::rngs::OsRng;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel, ModelTrait,
-    QueryFilter, QuerySelect, Set, Unchanged,
+    QueryFilter, QuerySelect, Select, Set, Unchanged,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -39,6 +39,20 @@ pub struct LoginRequest {
 pub struct JwtToken {
     pub access_token: String,
     pub refresh_token: String,
+}
+
+/// 用于构造查找用户函数的工具方法。
+/// 
+/// 注意：除非必要，不要直接使用 `entity::user::Entity::find_by_id`，因为它会查找所有用户，包括已删除的用户。
+pub fn find_user_by_id(id: i32) -> Select<user::Entity> {
+    user::Entity::find_by_id(id).filter(user::Column::IsDeleted.eq(false))
+}
+
+/// 用于构造查找用户函数的工具方法。
+/// 
+/// 注意：除非必要，不要直接使用 `entity::user::Entity::find`，因为它会查找所有用户，包括已删除的用户。
+pub fn find_user() -> Select<user::Entity> {
+    user::Entity::find().filter(user::Column::IsDeleted.eq(false))
 }
 
 fn to_salted_password(password: &String) -> Result<String, argon2::password_hash::Error> {
@@ -59,7 +73,7 @@ pub async fn login(
     db: Data<DatabaseConnection>,
 ) -> AResult<AJson<JwtToken>> {
     // 验证用户存在及密码正确
-    let user = user::Entity::find_by_id(creds.id)
+    let user = find_user_by_id(creds.id)
         .one(db.get_ref())
         .await?
         .ok_or_else(|| not_found("User not found"))?;
@@ -146,7 +160,7 @@ pub async fn register(
         }
         user_type::SUPER_ADMIN => {
             // 只有在无超级管理员的情况下才能创建超级管理员
-            let su = user::Entity::find()
+            let su = find_user()
                 .filter(user::Column::Role.eq(user_type::SUPER_ADMIN))
                 .one(db.get_ref())
                 .await?;
@@ -172,6 +186,7 @@ pub async fn register(
     responses(
         (status = OK, description = "Get users successful", body = [GetUser])
     ),
+    security(("jwt_token" = []))
 )]
 #[get("/user")]
 pub async fn get_users(
@@ -180,7 +195,7 @@ pub async fn get_users(
     db: Data<DatabaseConnection>,
 ) -> AResult<AJson<Vec<GetUser>>> {
     Ok(AJson(
-        entity::user::Entity::find()
+        find_user()
             .limit(paging.page_size)
             .offset(paging.page * paging.page_size)
             .all(db.get_ref())
@@ -220,7 +235,7 @@ pub async fn get_user(
     if auth.auth_info.role != user_type::SUPER_ADMIN && auth.auth_info.id != id {
         Err(forbidden("Permission denied").into())
     } else {
-        let user = user::Entity::find_by_id(id)
+        let user = find_user_by_id(id)
             .one(db.get_ref())
             .await?
             .ok_or_else(|| not_found("User not found"))?;
@@ -270,6 +285,7 @@ pub async fn update_user(
         (status = OK, description = "Delete user successful", body = GeneralResponse),
         (status = NOT_FOUND, description = "User not found", body = GeneralResponse),
     ),
+    security(("jwt_token" = []))
 )]
 #[delete("/user/{id}")]
 pub async fn delete_user(
@@ -282,7 +298,18 @@ pub async fn delete_user(
     if auth.auth_info.role != user_type::SUPER_ADMIN && auth.auth_info.id != id {
         Err(forbidden("Permission denied").into())
     } else {
-        auth.auth_info.delete(db.get_ref()).await?;
+        let target = if id == auth.auth_info.id {
+            auth.auth_info
+        } else {
+            find_user_by_id(id)
+                .one(db.get_ref())
+                .await?
+                .ok_or_else(|| not_found("User not found"))?
+        };
+        let mut active_target = target.into_active_model();
+        active_target.is_deleted = Set(true);
+        active_target.update(db.get_ref()).await?;
+
         // TODO: 更新缓存，使该用户的 token 失效
         Ok(AJson(GeneralResponse {
             message: "Delete user successful".to_string(),
