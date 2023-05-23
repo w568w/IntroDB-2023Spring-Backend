@@ -99,7 +99,7 @@ impl ResponseError for Error {
     fn error_response(&self) -> actix_web::HttpResponse<actix_web::body::BoxBody> {
         let mut builder = HttpResponseBuilder::new(self.status_code());
         if self.status_code() == StatusCode::UNAUTHORIZED {
-            builder.append_header((header::WWW_AUTHENTICATE, "Basic realm=Restricted"));
+            builder.append_header((header::WWW_AUTHENTICATE, "Bearer realm=Restricted"));
         }
         builder.json(GeneralResponse {
             message: self.message.clone(),
