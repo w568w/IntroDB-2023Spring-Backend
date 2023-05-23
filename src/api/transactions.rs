@@ -10,6 +10,7 @@ use entity::transaction::GetTransaction;
 use sea_orm::{DatabaseConnection, EntityTrait, QuerySelect};
 
 #[p(
+    params(PagingRequest),
     responses(
         (status = OK, description = "Get transaction list successfully", body = [GetTransaction]),
     ),

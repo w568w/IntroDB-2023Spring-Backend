@@ -47,6 +47,7 @@ enum User {
     Role,
     RealName,
     Sex,
+    IsDeleted,
 }
 
 enum TicketStatus {
@@ -230,6 +231,12 @@ fn user() -> TableCreateStatement {
         .col(
             ColumnDef::new(User::Sex)
                 .enumeration(Sex::EnumName, Sex::EnumName)
+                .not_null(),
+        )
+        .col(
+            ColumnDef::new(User::IsDeleted)
+                .boolean()
+                .default(false)
                 .not_null(),
         )
         .to_owned()

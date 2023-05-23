@@ -21,8 +21,8 @@ use entity::user::{self, GetUser, NewUser, UpdateUser};
 use once_cell::sync::Lazy;
 use rand::rngs::OsRng;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
-    QueryFilter, Set, Unchanged,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel, ModelTrait,
+    QueryFilter, QuerySelect, Set, Unchanged,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -175,10 +175,20 @@ pub async fn register(
 )]
 #[get("/user")]
 pub async fn get_users(
-    _page: Query<PagingRequest>,
-    _req: HttpRequest,
+    paging: Query<PagingRequest>,
+    _auth: APermission<JwtClaims, AllowSuperAdmin>,
+    db: Data<DatabaseConnection>,
 ) -> AResult<AJson<Vec<GetUser>>> {
-    todo!()
+    Ok(AJson(
+        entity::user::Entity::find()
+            .limit(paging.page_size)
+            .offset(paging.page * paging.page_size)
+            .all(db.get_ref())
+            .await?
+            .into_iter()
+            .map(Into::into)
+            .collect(),
+    ))
 }
 
 #[p(
@@ -239,6 +249,12 @@ pub async fn update_user(
     if auth.auth_info.role != user_type::SUPER_ADMIN && auth.auth_info.id != id {
         Err(forbidden("Permission denied").into())
     } else {
+        if let Some(ref role) = info.role {
+            // 只有超级管理员才能修改别人为超级管理员
+            if auth.auth_info.role != user_type::SUPER_ADMIN && role == user_type::SUPER_ADMIN {
+                return Err(forbidden("Permission denied").into());
+            }
+        }
         if let Some(ref password) = info.password_salt {
             // 如果有密码，需要给密码加盐
             info.password_salt = Some(to_salted_password(password)?);
@@ -256,6 +272,20 @@ pub async fn update_user(
     ),
 )]
 #[delete("/user/{id}")]
-pub async fn delete_user(_id: Path<i32>, _req: HttpRequest) -> AResult<AJson<GeneralResponse>> {
-    todo!()
+pub async fn delete_user(
+    id: Path<i32>,
+    auth: APermission<JwtClaims, AllowAdmin>,
+    db: Data<DatabaseConnection>,
+) -> AResult<AJson<GeneralResponse>> {
+    let id = id.into_inner();
+    // 只有自己或超级管理员才能修改用户信息
+    if auth.auth_info.role != user_type::SUPER_ADMIN && auth.auth_info.id != id {
+        Err(forbidden("Permission denied").into())
+    } else {
+        auth.auth_info.delete(db.get_ref()).await?;
+        // TODO: 更新缓存，使该用户的 token 失效
+        Ok(AJson(GeneralResponse {
+            message: "Delete user successful".to_string(),
+        }))
+    }
 }

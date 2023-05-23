@@ -19,6 +19,9 @@ pub struct Model {
     pub role: String,
     pub real_name: String,
     pub sex: Sex,
+    /// 是否已经删除
+    #[sea_orm(default_value = "false")]
+    pub is_deleted: bool,
     // - TODO: 绩效指标
     #[sea_orm(ignore)]
     pub kpi: (),
@@ -72,6 +75,7 @@ impl IntoActiveModel<ActiveModel> for UpdateUser {
             role: to_active(self.role),
             real_name: to_active(self.real_name),
             sex: to_active(self.sex),
+            is_deleted: NotSet,
         }
     }
 }
