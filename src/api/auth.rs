@@ -21,7 +21,7 @@ use entity::user::{self, GetUser, NewUser, UpdateUser};
 use once_cell::sync::Lazy;
 use rand::rngs::OsRng;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel, ModelTrait,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
     QueryFilter, QuerySelect, Select, Set, Unchanged,
 };
 use serde::{Deserialize, Serialize};
