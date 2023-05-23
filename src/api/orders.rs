@@ -1,4 +1,5 @@
 use crate::utils::errors::{conflict, not_found, unprocessable_entity};
+use crate::utils::ext::SelectExt;
 use crate::utils::jwt::{AllowAdmin, JwtClaims};
 use crate::utils::permission::APermission;
 
@@ -6,6 +7,7 @@ use super::preclude::*;
 
 use super::PagingRequest;
 use actix_web::web::Data;
+use actix_web::HttpResponse;
 use actix_web::{
     get, post,
     web::{Path, Query},
@@ -16,8 +18,8 @@ use entity::order_list::{GetOrder, NewOrder};
 
 use entity::{order_list, TicketStatus, TicketType};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait,
-    IntoActiveModel, QueryFilter, QuerySelect, Set, TransactionTrait,
+    ActiveModelTrait, ConnectionTrait, DatabaseConnection, EntityTrait,
+    IntoActiveModel, Set, TransactionTrait,
 };
 
 #[p(
@@ -65,18 +67,10 @@ pub async fn get_sell_list(
     paging: Query<PagingRequest>,
     _auth: APermission<JwtClaims, AllowAdmin>,
     db: Data<DatabaseConnection>,
-) -> AResult<AJson<Vec<GetOrder>>> {
-    Ok(AJson(
-        entity::order_list::Entity::find()
-            .filter(order_list::Column::Typ.eq(TicketType::Sell))
-            .limit(paging.page_size)
-            .offset(paging.page * paging.page_size)
-            .all(db.get_ref())
-            .await?
-            .into_iter()
-            .map(Into::into)
-            .collect(),
-    ))
+) -> AResult<HttpResponse> {
+    entity::order_list::Entity::find()
+        .paged::<DatabaseConnection, _, GetOrder>(paging.into_inner(), db.get_ref())
+        .await
 }
 
 #[p(
@@ -208,18 +202,10 @@ pub async fn get_stock_list(
     paging: Query<PagingRequest>,
     _auth: APermission<JwtClaims, AllowAdmin>,
     db: Data<DatabaseConnection>,
-) -> AResult<AJson<Vec<GetOrder>>> {
-    Ok(AJson(
-        entity::order_list::Entity::find()
-            .filter(order_list::Column::Typ.eq(TicketType::Stock))
-            .limit(paging.page_size)
-            .offset(paging.page * paging.page_size)
-            .all(db.get_ref())
-            .await?
-            .into_iter()
-            .map(Into::into)
-            .collect(),
-    ))
+) -> AResult<HttpResponse> {
+    entity::order_list::Entity::find()
+        .paged::<DatabaseConnection, _, GetOrder>(paging.into_inner(), db.get_ref())
+        .await
 }
 
 #[p(

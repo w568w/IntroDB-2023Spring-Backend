@@ -1,6 +1,7 @@
 use crate::utils::errors::not_found;
 use crate::utils::errors::unprocessable_entity;
 use crate::utils::ext::OptionExt;
+use crate::utils::ext::SelectExt;
 use crate::utils::jwt::AllowAdmin;
 use crate::utils::jwt::JwtClaims;
 use crate::utils::permission::APermission;
@@ -9,6 +10,7 @@ use super::preclude::*;
 
 use super::PagingRequest;
 use actix_web::web::Data;
+use actix_web::HttpResponse;
 use actix_web::{
     get, patch, post,
     web::{Path, Query},
@@ -19,7 +21,6 @@ use sea_orm::Set;
 use sea_orm::Unchanged;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel, QueryFilter,
-    QuerySelect,
 };
 use serde::Deserialize;
 use utoipa::IntoParams;
@@ -47,7 +48,7 @@ pub async fn get_books(
     data: Query<BookFilter>,
     _auth: APermission<JwtClaims, AllowAdmin>,
     db: Data<DatabaseConnection>,
-) -> AResult<AJson<Vec<Model>>> {
+) -> AResult<HttpResponse> {
     let mut query = entity::book::Entity::find();
 
     for (column, value) in &[
@@ -60,11 +61,10 @@ pub async fn get_books(
             .as_ref()
             .apply_if_some(query, |query, value| query.filter(column.contains(value)));
     }
-    query = query
-        .limit(data.paging.page_size)
-        .offset(data.paging.page_size * data.paging.page);
 
-    Ok(AJson(query.all(db.get_ref()).await?))
+    query
+        .paged::<DatabaseConnection, _, Model>(data.into_inner().paging, db.get_ref())
+        .await
 }
 
 #[p(

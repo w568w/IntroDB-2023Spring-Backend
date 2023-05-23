@@ -1,5 +1,6 @@
 use crate::contants::user_type;
 use crate::utils::errors::{bad_request, conflict, forbidden, iam_a_teapot, not_found, AError};
+use crate::utils::ext::SelectExt;
 use crate::utils::jwt::{
     gen_secret_key, issue_acc_ref_token, AllowAdmin, AllowRefresh, AllowSuperAdmin, JwtClaims,
 };
@@ -9,20 +10,19 @@ use super::preclude::*;
 
 use super::{GeneralResponse, PagingRequest};
 use actix_web::web::{Data, Payload};
-use actix_web::FromRequest;
 use actix_web::{
     delete, get, patch, post,
     web::{Path, Query},
     HttpRequest,
 };
+use actix_web::{FromRequest, HttpResponse};
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use entity::user::{self, GetUser, NewUser, UpdateUser};
 use once_cell::sync::Lazy;
 use rand::rngs::OsRng;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel,
-    QueryFilter, QuerySelect, Select, Set, Unchanged,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel, QueryFilter, Select, Set, Unchanged,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -42,14 +42,14 @@ pub struct JwtToken {
 }
 
 /// 用于构造查找用户函数的工具方法。
-/// 
+///
 /// 注意：除非必要，不要直接使用 `entity::user::Entity::find_by_id`，因为它会查找所有用户，包括已删除的用户。
 pub fn find_user_by_id(id: i32) -> Select<user::Entity> {
     user::Entity::find_by_id(id).filter(user::Column::IsDeleted.eq(false))
 }
 
 /// 用于构造查找用户函数的工具方法。
-/// 
+///
 /// 注意：除非必要，不要直接使用 `entity::user::Entity::find`，因为它会查找所有用户，包括已删除的用户。
 pub fn find_user() -> Select<user::Entity> {
     user::Entity::find().filter(user::Column::IsDeleted.eq(false))
@@ -193,17 +193,13 @@ pub async fn get_users(
     paging: Query<PagingRequest>,
     _auth: APermission<JwtClaims, AllowSuperAdmin>,
     db: Data<DatabaseConnection>,
-) -> AResult<AJson<Vec<GetUser>>> {
-    Ok(AJson(
-        find_user()
-            .limit(paging.page_size)
-            .offset(paging.page * paging.page_size)
-            .all(db.get_ref())
-            .await?
-            .into_iter()
-            .map(Into::into)
-            .collect(),
-    ))
+) -> AResult<HttpResponse> {
+    find_user()
+        .paged::<DatabaseConnection, _, GetUser>(
+            paging.into_inner(),
+            db.get_ref(),
+        )
+        .await
 }
 
 #[p(
