@@ -3,12 +3,11 @@ use std::borrow::Borrow;
 use actix_web::HttpResponse;
 use async_trait::async_trait;
 use sea_orm::{
-    ConnectionTrait, EntityTrait, QuerySelect, QueryTrait, Select, StatementBuilder,
-    TransactionTrait,
+    ConnectionTrait, EntityTrait, QuerySelect, QueryTrait, Select, TransactionTrait,
 };
 use serde::Serialize;
 
-use crate::api::PagingRequest;
+use crate::{api::PagingRequest, contants};
 
 use super::errors::{internal_server_error, AResult};
 
@@ -91,7 +90,7 @@ where
             .collect();
 
         Ok(HttpResponse::Ok()
-            .append_header(("X-Item-Count", count))
+            .append_header((contants::ITEM_COUNT_HEADER, count))
             .json(query_result))
     }
 }

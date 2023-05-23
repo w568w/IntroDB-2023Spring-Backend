@@ -47,6 +47,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         let mut cors = Cors::default();
+        cors = cors.expose_headers([crate::contants::ITEM_COUNT_HEADER]);
         if allow_cors {
             cors = cors
                 .allow_any_origin()
