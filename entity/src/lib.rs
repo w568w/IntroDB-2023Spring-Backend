@@ -46,6 +46,18 @@ impl IntoActiveValue<TicketStatus> for TicketStatus {
     Debug, PartialEq, Eq, Clone, EnumIter, DeriveActiveEnum, Serialize, Deserialize, ToSchema,
 )]
 #[non_exhaustive]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "ticket_type")]
+pub enum TicketType {
+    #[sea_orm(string_value = "Sell")]
+    Sell,
+    #[sea_orm(string_value = "Stock")]
+    Stock,
+}
+
+#[derive(
+    Debug, PartialEq, Eq, Clone, EnumIter, DeriveActiveEnum, Serialize, Deserialize, ToSchema,
+)]
+#[non_exhaustive]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "sex")]
 pub enum Sex {
     #[sea_orm(string_value = "Male")]

@@ -1,4 +1,4 @@
-use crate::{book::NewBookInfo, TicketStatus};
+use crate::{book::NewBookInfo, TicketStatus, TicketType};
 use chrono::offset::Utc;
 use fromsuper::FromSuper;
 use sea_orm::{entity::prelude::*, ActiveValue::NotSet, Set};
@@ -17,6 +17,7 @@ pub struct Model {
     pub total_count: i32,
     // 订单状态
     pub status: TicketStatus,
+    pub typ: TicketType,
     // 订单元信息
     // - 创建时间
     pub created_at: DateTime,
@@ -70,12 +71,13 @@ pub struct NewOrder {
 }
 
 impl NewOrder {
-    pub fn into_active_model(self, operator_id: i32) -> ActiveModel {
+    pub fn into_active_model(self, operator_id: i32, typ: TicketType) -> ActiveModel {
         ActiveModel {
             id: NotSet,
             total_price: Set(self.total_price),
             total_count: Set(self.total_count),
             status: Set(TicketStatus::Pending),
+            typ: Set(typ),
             created_at: Set(Utc::now().naive_utc()),
             updated_at: Set(Utc::now().naive_utc()),
             book_isbn: Set(self.book_isbn),

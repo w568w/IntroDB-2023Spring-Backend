@@ -21,7 +21,7 @@ use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel, QueryFilter,
     QuerySelect,
 };
-use serde::{Deserialize};
+use serde::Deserialize;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 

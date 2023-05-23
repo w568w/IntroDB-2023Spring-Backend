@@ -70,6 +70,7 @@ pub struct PagingRequest {
         entity::order_list::NewOrder,
         entity::transaction::GetTransaction,
         entity::TicketStatus,
+        entity::TicketType,
         entity::Sex,
     )),
     modifiers(&SecurityAddon)

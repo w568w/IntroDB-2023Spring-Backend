@@ -22,6 +22,7 @@ enum OrderList {
     TotalPrice,
     TotalCount,
     Status,
+    Typ,
     CreatedAt,
     UpdatedAt,
     BookIsbn,
@@ -120,6 +121,36 @@ impl IntoIterator for Sex {
     }
 }
 
+enum TicketType {
+    EnumName,
+    Sell,
+    Stock,
+}
+
+impl Iden for TicketType {
+    fn unquoted(&self, s: &mut dyn std::fmt::Write) {
+        write!(
+            s,
+            "{}",
+            match self {
+                TicketType::EnumName => "ticket_type",
+                TicketType::Sell => "Sell",
+                TicketType::Stock => "Stock",
+            }
+        )
+        .expect("Unable to write iden")
+    }
+}
+
+impl IntoIterator for TicketType {
+    type Item = Self;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        vec![TicketType::Sell, TicketType::Stock].into_iter()
+    }
+}
+
 fn book() -> TableCreateStatement {
     Table::create()
         .table(Book::Table)
@@ -140,13 +171,19 @@ fn order_list() -> TableCreateStatement {
             ColumnDef::new(OrderList::Id)
                 .integer()
                 .not_null()
-                .primary_key().auto_increment(),
+                .primary_key()
+                .auto_increment(),
         )
         .col(ColumnDef::new(OrderList::TotalPrice).float().not_null())
         .col(ColumnDef::new(OrderList::TotalCount).integer().not_null())
         .col(
             ColumnDef::new(OrderList::Status)
                 .enumeration(TicketStatus::EnumName, TicketStatus::EnumName)
+                .not_null(),
+        )
+        .col(
+            ColumnDef::new(OrderList::Typ)
+                .enumeration(TicketType::EnumName, TicketType::EnumName)
                 .not_null(),
         )
         .col(ColumnDef::new(OrderList::CreatedAt).date_time().not_null())
@@ -163,7 +200,8 @@ fn transaction() -> TableCreateStatement {
             ColumnDef::new(Transaction::Id)
                 .big_integer()
                 .not_null()
-                .primary_key().auto_increment(),
+                .primary_key()
+                .auto_increment(),
         )
         .col(
             ColumnDef::new(Transaction::CreatedAt)
@@ -178,7 +216,13 @@ fn transaction() -> TableCreateStatement {
 fn user() -> TableCreateStatement {
     Table::create()
         .table(User::Table)
-        .col(ColumnDef::new(User::Id).integer().not_null().primary_key().auto_increment())
+        .col(
+            ColumnDef::new(User::Id)
+                .integer()
+                .not_null()
+                .primary_key()
+                .auto_increment(),
+        )
         .col(ColumnDef::new(User::PasswordSalt).string().not_null())
         .col(ColumnDef::new(User::SecretKey).string().not_null())
         .col(ColumnDef::new(User::Role).string().not_null())
