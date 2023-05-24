@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::{env, future::Future, pin::Pin};
 
 use actix_web::{web::Data, FromRequest};
@@ -5,12 +6,15 @@ use chrono::Utc;
 use entity::user;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use rand::{distributions::Alphanumeric, rngs::OsRng, Rng};
+use redis::aio::MultiplexedConnection;
+use redis::AsyncCommands;
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use tokio::sync::Mutex;
 
 use crate::{
-    api::auth::{JwtToken, find_user_by_id},
+    api::auth::{find_user_by_id, JwtToken},
     contants::{
         envs::JWT_SECRET, user_type, ACCESS_TOKEN_EXPIRE_SECONDS, ISSUER,
         REFRESH_TOKEN_EXPIRE_SECONDS, SECRET_KEY_LENGTH,
@@ -149,18 +153,49 @@ where
     type Authentication = JwtClaims;
     type Output = user::Model;
     type Future = Pin<Box<dyn Future<Output = Result<Option<user::Model>, actix_web::Error>>>>;
-    type AppData = DatabaseConnection;
+    type AppData = (
+        Arc<DatabaseConnection>,
+        Arc<Option<Mutex<MultiplexedConnection>>>,
+    );
     fn check_permission(
-        db: Data<DatabaseConnection>,
+        db: Data<(
+            Arc<DatabaseConnection>,
+            Arc<Option<Mutex<MultiplexedConnection>>>,
+        )>,
         permission: &Self::Authentication,
     ) -> Self::Future {
         let permission = permission.clone();
         Box::pin(async move {
-            let this_user = find_user_by_id(permission.user_id)
-                .one(db.get_ref())
-                .await
-                .map_err(internal_server_error)?
-                .ok_or_else(|| unauthorized("The user does not exist"))?;
+            let redis_conn = db.get_ref().1.as_ref();
+
+            let this_user = if let Some(redis_conn) = redis_conn {
+                let mut redis_conn = redis_conn.lock().await;
+                redis_conn
+                    .get(permission.user_id)
+                    .await
+                    .map_err(internal_server_error)?
+            } else {
+                None
+            };
+
+            let this_user = if let Some(this_user) = this_user {
+                this_user
+            } else {
+                let user = find_user_by_id(permission.user_id)
+                    .one(db.get_ref().0.as_ref())
+                    .await
+                    .map_err(internal_server_error)?
+                    .ok_or_else(|| unauthorized("The user does not exist"))?;
+
+                if let Some(redis_conn) = redis_conn {
+                    let mut redis_conn = redis_conn.lock().await;
+                    redis_conn
+                        .set(permission.user_id, &user)
+                        .await
+                        .map_err(internal_server_error)?;
+                }
+                user
+            };
 
             // 验证 Secret Key 是否匹配
             if this_user.secret_key != permission.secret_key {

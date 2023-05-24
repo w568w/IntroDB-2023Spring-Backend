@@ -1,12 +1,12 @@
+use actix_web::{web::Data, FromRequest};
+use either::Either;
+use pin_project::pin_project;
+use std::sync::Arc;
 use std::{
     future::{ready, Future, Ready},
     pin::Pin,
     task::Poll,
 };
-
-use actix_web::{web::Data, FromRequest};
-use either::Either;
-use pin_project::pin_project;
 
 use super::errors::{forbidden, internal_server_error};
 
@@ -29,7 +29,7 @@ pub trait CheckPermission {
     type Output;
     type Future: Future<Output = Result<Option<Self::Output>, actix_web::Error>>;
     type Authentication;
-    type AppData: ?Sized + 'static;
+    type AppData: 'static;
     fn check_permission(
         req: Data<Self::AppData>,
         permission: &Self::Authentication,
@@ -46,7 +46,7 @@ where
 }
 
 /// A FromRequest trait for Data<T> that has special handling for empty type `Data<()>`.
-trait EmptySafeDataFromRequest<T: ?Sized + 'static>: Sized {
+trait EmptySafeDataFromRequest<T: 'static>: Sized {
     type Future: Future<Output = Result<Self, actix_web::Error>>;
     fn from_request_safe(
         req: &actix_web::HttpRequest,
@@ -54,7 +54,7 @@ trait EmptySafeDataFromRequest<T: ?Sized + 'static>: Sized {
     ) -> Self::Future;
 }
 
-impl<T: ?Sized + 'static> EmptySafeDataFromRequest<T> for Data<T> {
+impl<T: 'static> EmptySafeDataFromRequest<T> for Data<T> {
     type Future = Ready<Result<Self, actix_web::Error>>;
     default fn from_request_safe(
         req: &actix_web::HttpRequest,
@@ -70,6 +70,21 @@ impl EmptySafeDataFromRequest<()> for Data<()> {
         _: &mut actix_web::dev::Payload,
     ) -> Self::Future {
         ready(Ok(Data::new(())))
+    }
+}
+
+impl<A: 'static, B: 'static> EmptySafeDataFromRequest<(Arc<A>, Arc<B>)> for Data<(Arc<A>, Arc<B>)> {
+    fn from_request_safe(
+        req: &actix_web::HttpRequest,
+        payload: &mut actix_web::dev::Payload,
+    ) -> Self::Future {
+        let a = <Data<A> as FromRequest>::from_request(req, payload).into_inner();
+        let b = <Data<B> as FromRequest>::from_request(req, payload).into_inner();
+        match (a, b) {
+            (Ok(a), Ok(b)) => ready(Ok(Data::new((a.into_inner(), b.into_inner())))),
+            (Err(e), _) => ready(Err(e)),
+            (_, Err(e)) => ready(Err(e)),
+        }
     }
 }
 

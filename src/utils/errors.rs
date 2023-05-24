@@ -6,6 +6,7 @@ use actix_web::{
     http::{header, StatusCode},
     HttpResponseBuilder, ResponseError,
 };
+use redis::RedisError;
 
 use crate::api::GeneralResponse;
 
@@ -77,6 +78,15 @@ impl From<argon2::password_hash::Error> for Error {
 
 impl From<jsonwebtoken::errors::Error> for Error {
     fn from(err: jsonwebtoken::errors::Error) -> Self {
+        Self {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            message: err.to_string(),
+        }
+    }
+}
+
+impl From<RedisError> for Error {
+    fn from(err: RedisError) -> Self {
         Self {
             status: StatusCode::INTERNAL_SERVER_ERROR,
             message: err.to_string(),

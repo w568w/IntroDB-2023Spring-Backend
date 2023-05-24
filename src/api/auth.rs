@@ -21,10 +21,14 @@ use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use entity::user::{self, GetUser, NewUser, UpdateUser};
 use once_cell::sync::Lazy;
 use rand::rngs::OsRng;
+use redis::aio::MultiplexedConnection;
+use redis::AsyncCommands;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel, QueryFilter, Select, Set, Unchanged,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel, QueryFilter,
+    Select, Set, Unchanged,
 };
 use serde::{Deserialize, Serialize};
+use tokio::sync::Mutex;
 use utoipa::ToSchema;
 
 static ARGON: Lazy<Argon2> = Lazy::new(Argon2::default);
@@ -53,6 +57,17 @@ pub fn find_user_by_id(id: i32) -> Select<user::Entity> {
 /// 注意：除非必要，不要直接使用 `entity::user::Entity::find`，因为它会查找所有用户，包括已删除的用户。
 pub fn find_user() -> Select<user::Entity> {
     user::Entity::find().filter(user::Column::IsDeleted.eq(false))
+}
+
+/// 删除 Redis 缓存中的用户信息。
+///
+/// 注意：总是应该在修改数据库前调用此函数，或者在数据库事务中调用此函数。否则，可能会导致 Redis 缓存与数据库不一致。
+async fn invalidate_key(key: i32, rd: Data<Option<Mutex<MultiplexedConnection>>>) -> AResult<()> {
+    if let Some(rd) = rd.get_ref() {
+        let mut rd = rd.lock().await;
+        rd.del(key).await?;
+    }
+    Ok(())
 }
 
 fn to_salted_password(password: &String) -> Result<String, argon2::password_hash::Error> {
@@ -123,11 +138,16 @@ pub async fn refresh(auth: APermission<JwtClaims, AllowRefresh>) -> AResult<AJso
 #[post("/user/logout")]
 pub async fn logout(
     db: Data<DatabaseConnection>,
+    rd: Data<Option<Mutex<MultiplexedConnection>>>,
     auth: APermission<JwtClaims, AllowAdmin>,
 ) -> AResult<AJson<GeneralResponse>> {
+    let user_id = auth.auth_info.id;
     let mut user = auth.auth_info.into_active_model();
     user.secret_key = Set(gen_secret_key(user.secret_key.take()));
+
+    invalidate_key(user_id, rd).await?;
     user.update(db.get_ref()).await?;
+
     Ok(AJson(GeneralResponse {
         message: "Logout successful".to_string(),
     }))
@@ -195,10 +215,7 @@ pub async fn get_users(
     db: Data<DatabaseConnection>,
 ) -> AResult<HttpResponse> {
     find_user()
-        .paged::<DatabaseConnection, _, GetUser>(
-            paging.into_inner(),
-            db.get_ref(),
-        )
+        .paged::<DatabaseConnection, _, GetUser>(paging.into_inner(), db.get_ref())
         .await
 }
 
@@ -253,6 +270,7 @@ pub async fn update_user(
     id: Path<i32>,
     mut info: AJson<UpdateUser>,
     auth: APermission<JwtClaims, AllowAdmin>,
+    rd: Data<Option<Mutex<MultiplexedConnection>>>,
     db: Data<DatabaseConnection>,
 ) -> AResult<AJson<GetUser>> {
     let id = id.into_inner();
@@ -272,6 +290,8 @@ pub async fn update_user(
         }
         let mut info = info.into_inner().into_active_model();
         info.id = Unchanged(id);
+
+        invalidate_key(id, rd).await?;
         Ok(AJson(info.update(db.get_ref()).await?.into()))
     }
 }
@@ -288,6 +308,7 @@ pub async fn delete_user(
     id: Path<i32>,
     auth: APermission<JwtClaims, AllowAdmin>,
     db: Data<DatabaseConnection>,
+    rd: Data<Option<Mutex<MultiplexedConnection>>>,
 ) -> AResult<AJson<GeneralResponse>> {
     let id = id.into_inner();
     // 只有自己或超级管理员才能修改用户信息
@@ -302,11 +323,13 @@ pub async fn delete_user(
                 .await?
                 .ok_or_else(|| not_found("User not found"))?
         };
+
+        invalidate_key(id, rd).await?;
+
         let mut active_target = target.into_active_model();
         active_target.is_deleted = Set(true);
         active_target.update(db.get_ref()).await?;
 
-        // TODO: 更新缓存，使该用户的 token 失效
         Ok(AJson(GeneralResponse {
             message: "Delete user successful".to_string(),
         }))

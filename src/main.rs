@@ -1,11 +1,11 @@
 #![feature(min_specialization, ready_into_inner)]
-use std::env;
-
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
 use log::{error, info, warn};
 use migration::{Migrator, MigratorTrait};
 use sea_orm::Database;
+use std::env;
+use tokio::sync::Mutex;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -26,6 +26,18 @@ async fn main() -> std::io::Result<()> {
     )
     .await
     .expect("Unable to connect to the database");
+
+    let redis_url = env::var(envs::REDIS_URL);
+    let mut redis_conn = None;
+    if let Ok(redis_url) = redis_url {
+        let redis = redis::Client::open(redis_url).expect("Unable to open redis client");
+        redis_conn = Some(
+            redis
+                .get_multiplexed_async_connection()
+                .await
+                .expect("Unable to connect to redis"),
+        );
+    }
 
     info!("Starting migration");
     let result = Migrator::up(&db, None).await;
@@ -63,6 +75,7 @@ async fn main() -> std::io::Result<()> {
                     .url("/api-docs/openapi.json", api::ApiDoc::openapi()),
             )
             .app_data(web::Data::new(db.clone()))
+            .app_data(web::Data::new(redis_conn.clone().map(Mutex::new)))
     })
     .bind(("127.0.0.1", 8080))?
     .run()

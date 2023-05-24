@@ -1,11 +1,13 @@
+use crate::{to_active, Sex};
 use fromsuper::FromSuper;
+use redis_macros::{FromRedisValue, ToRedisArgs};
 use sea_orm::{entity::prelude::*, ActiveValue::NotSet, IntoActiveModel};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{to_active, Sex};
-
-#[derive(Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize, FromRedisValue, ToRedisArgs,
+)]
 #[sea_orm(table_name = "user")]
 pub struct Model {
     #[sea_orm(primary_key)]

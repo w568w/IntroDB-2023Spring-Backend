@@ -8,5 +8,8 @@ publish = false
 fromsuper = "^0.1"
 sea-orm = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 utoipa = { workspace = true }
 chrono = { workspace = true }
+redis = { workspace = true }
+redis-macros = { workspace = true }
