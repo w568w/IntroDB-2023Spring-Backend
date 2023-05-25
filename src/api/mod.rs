@@ -11,6 +11,7 @@ pub mod books;
 pub mod orders;
 mod preclude;
 pub mod transactions;
+pub mod stats;
 
 #[derive(Serialize, ToSchema)]
 pub struct GeneralResponse {
@@ -53,11 +54,20 @@ pub struct PagingRequest {
         orders::revoke_stock,
         orders::confirm_stock,
         transactions::get_transaction_list,
+        stats::stat_transaction,
+        stats::stat_stock,
+        stats::stat_sell,
+        stats::stat_book,
     ),
     components(schemas(
         auth::LoginRequest,
         auth::JwtToken,
         books::PutOnShelfRequest,
+        stats::StatSpan,
+        stats::StatTransaction,
+        stats::StatStock,
+        stats::StatSell,
+        stats::StatBook,
         GeneralResponse,
         PagingRequest,
         entity::user::GetUser,
@@ -117,6 +127,10 @@ pub fn configure() -> impl FnOnce(&mut ServiceConfig) {
             .service(orders::pay_stock)
             .service(orders::revoke_stock)
             .service(orders::confirm_stock)
-            .service(transactions::get_transaction_list);
+            .service(transactions::get_transaction_list)
+            .service(stats::stat_transaction)
+            .service(stats::stat_stock)
+            .service(stats::stat_sell)
+            .service(stats::stat_book);
     }
 }

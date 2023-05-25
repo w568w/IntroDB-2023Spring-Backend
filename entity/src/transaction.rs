@@ -31,6 +31,12 @@ pub enum Relation {
     OrderList,
 }
 
+impl Related<super::order_list::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::OrderList.def()
+    }
+}
+
 impl ActiveModelBehavior for ActiveModel {}
 
 impl From<order_list::Model> for ActiveModel {

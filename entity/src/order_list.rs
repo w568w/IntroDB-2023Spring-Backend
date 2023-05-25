@@ -30,7 +30,6 @@ pub struct Model {
     pub operator_id: i32,
 }
 
-
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(
@@ -45,6 +44,9 @@ pub enum Relation {
         to = "super::user::Column::Id"
     )]
     User,
+
+    #[sea_orm(has_many = "super::transaction::Entity")]
+    Transaction,
 }
 
 impl Related<super::book::Entity> for Entity {
@@ -56,6 +58,12 @@ impl Related<super::book::Entity> for Entity {
 impl Related<super::user::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::User.def()
+    }
+}
+
+impl Related<super::transaction::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Transaction.def()
     }
 }
 

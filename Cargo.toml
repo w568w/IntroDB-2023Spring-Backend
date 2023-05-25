@@ -61,6 +61,8 @@ dotenv = "^0.15"
 argon2 = "^0.5"
 # Swagger 托管
 utoipa-swagger-ui = { version = "^3", features = ["actix-web"] }
+# 宏计数
+count-macro = "^0.2"
 
 utoipa = { workspace = true }
 sea-orm = { workspace = true }
