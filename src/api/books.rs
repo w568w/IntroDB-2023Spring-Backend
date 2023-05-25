@@ -36,6 +36,7 @@ pub struct BookFilter {
     pub publisher: Option<String>,
     #[serde(flatten)]
     pub paging: PagingRequest,
+    #[serde(alias = "sort")] 
     pub sort_by: Option<BookSort>,
 }
 
@@ -67,13 +68,16 @@ pub async fn get_books(
     let mut query = entity::book::Entity::find();
 
     for (column, value) in [
-        (entity::book::Column::Isbn, &data.isbn),
         (entity::book::Column::Title, &data.title),
         (entity::book::Column::Author, &data.author),
         (entity::book::Column::Publisher, &data.publisher),
     ] {
         query = query.apply_if(value.as_ref(), |q, v| q.filter(column.contains(v)));
     }
+
+    query = query.apply_if(data.isbn.as_ref(), |q, v| {
+        q.filter(entity::book::Column::Isbn.eq(v))
+    });
 
     query = query.apply_if(data.sort_by.as_ref(), |q, v| match v {
         BookSort::InventoryAsc => q.order_by_asc(entity::book::Column::InventoryCount),

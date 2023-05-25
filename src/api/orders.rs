@@ -28,6 +28,9 @@ use utoipa::IntoParams;
 pub struct OrderFilter {
     pub status: Option<TicketStatus>,
     pub operator: Option<i32>,
+    #[serde(alias = "isbn")] 
+    pub book_isbn: Option<String>,
+    pub id: Option<i32>,
     #[serde(flatten)]
     pub paging: PagingRequest,
 }
@@ -79,6 +82,12 @@ async fn get_order_list(
         })
         .apply_if(params.operator.as_ref(), |q, v| {
             q.filter(order_list::Column::OperatorId.eq(*v))
+        })
+        .apply_if(params.book_isbn.as_ref(), |q, v| {
+            q.filter(order_list::Column::BookIsbn.eq(v))
+        })
+        .apply_if(params.id.as_ref(), |q, v| {
+            q.filter(order_list::Column::Id.eq(*v))
         })
         .paged::<DatabaseConnection, _, GetOrder>(params.paging, db.get_ref())
         .await
