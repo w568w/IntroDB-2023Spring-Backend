@@ -63,6 +63,7 @@ pub struct PagingRequest {
     components(schemas(
         auth::LoginRequest,
         auth::JwtToken,
+        books::BookSort,
         books::PutOnShelfRequest,
         stats::StatSpan,
         stats::StatTransaction,

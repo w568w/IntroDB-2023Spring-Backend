@@ -219,7 +219,7 @@ pub async fn stat_stock(
         .select_only();
 
     Ok(AJson(StatStock {
-        total_stock_count: select_one(
+        total_stock_count: select_one::<Option<i32>>(
             db.get_ref(),
             query.clone().column_as(
                 entity::order_list::Column::TotalCount
@@ -230,8 +230,9 @@ pub async fn stat_stock(
             &[TOTAL_COUNT],
         )
         .await?
-        .0,
-        total_waiting_for_confirm_count: select_one(
+        .0
+        .unwrap_or(0),
+        total_waiting_for_confirm_count: select_one::<Option<i32>>(
             db.get_ref(),
             query
                 .filter(entity::order_list::Column::Status.eq(TicketStatus::StockPaid))
@@ -244,7 +245,8 @@ pub async fn stat_stock(
             &[TOTAL_COUNT],
         )
         .await?
-        .0,
+        .0
+        .unwrap_or(0),
     }))
 }
 

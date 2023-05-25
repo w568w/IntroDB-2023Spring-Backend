@@ -1,6 +1,6 @@
 use crate::utils::errors::not_found;
 use crate::utils::errors::unprocessable_entity;
-use crate::utils::ext::OptionExt;
+
 use crate::utils::ext::SelectExt;
 use crate::utils::jwt::AllowAdmin;
 use crate::utils::jwt::JwtClaims;
@@ -17,6 +17,8 @@ use actix_web::{
 };
 use entity::book::{Model, UpdateBook};
 
+use sea_orm::QueryOrder;
+use sea_orm::QueryTrait;
 use sea_orm::Set;
 use sea_orm::Unchanged;
 use sea_orm::{
@@ -34,6 +36,19 @@ pub struct BookFilter {
     pub publisher: Option<String>,
     #[serde(flatten)]
     pub paging: PagingRequest,
+    pub sort_by: Option<BookSort>,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub enum BookSort {
+    #[serde(rename = "inventory")]
+    InventoryAsc,
+    #[serde(rename = "_inventory")]
+    InventoryDesc,
+    #[serde(rename = "shelf")]
+    ShelfAsc,
+    #[serde(rename = "_shelf")]
+    ShelfDesc,
 }
 
 #[p(
@@ -51,16 +66,21 @@ pub async fn get_books(
 ) -> AResult<HttpResponse> {
     let mut query = entity::book::Entity::find();
 
-    for (column, value) in &[
+    for (column, value) in [
         (entity::book::Column::Isbn, &data.isbn),
         (entity::book::Column::Title, &data.title),
         (entity::book::Column::Author, &data.author),
         (entity::book::Column::Publisher, &data.publisher),
     ] {
-        query = value
-            .as_ref()
-            .apply_if_some(query, |query, value| query.filter(column.contains(value)));
+        query = query.apply_if(value.as_ref(), |q, v| q.filter(column.contains(v)));
     }
+
+    query = query.apply_if(data.sort_by.as_ref(), |q, v| match v {
+        BookSort::InventoryAsc => q.order_by_asc(entity::book::Column::InventoryCount),
+        BookSort::InventoryDesc => q.order_by_desc(entity::book::Column::InventoryCount),
+        BookSort::ShelfAsc => q.order_by_asc(entity::book::Column::OnShelfCount),
+        BookSort::ShelfDesc => q.order_by_desc(entity::book::Column::OnShelfCount),
+    });
 
     query
         .paged::<DatabaseConnection, _, Model>(data.into_inner().paging, db.get_ref())

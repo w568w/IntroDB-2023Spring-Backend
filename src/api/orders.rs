@@ -19,8 +19,18 @@ use entity::order_list::{GetOrder, NewOrder};
 use entity::{order_list, TicketStatus, TicketType};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait,
-    IntoActiveModel, QueryFilter, Set, TransactionTrait,
+    IntoActiveModel, QueryFilter, QueryOrder, QueryTrait, Set, TransactionTrait,
 };
+use serde::Deserialize;
+use utoipa::IntoParams;
+
+#[derive(Deserialize, IntoParams)]
+pub struct OrderFilter {
+    pub status: Option<TicketStatus>,
+    pub operator: Option<i32>,
+    #[serde(flatten)]
+    pub paging: PagingRequest,
+}
 
 #[p(
     request_body = NewOrder,
@@ -55,8 +65,27 @@ pub async fn sell_book(
     ))
 }
 
+async fn get_order_list(
+    params: Query<OrderFilter>,
+    db: Data<DatabaseConnection>,
+    typ: TicketType,
+) -> AResult<HttpResponse> {
+    let params = params.into_inner();
+    entity::order_list::Entity::find()
+        .filter(order_list::Column::Typ.eq(typ))
+        .order_by_desc(order_list::Column::UpdatedAt)
+        .apply_if(params.status.as_ref(), |q, v| {
+            q.filter(order_list::Column::Status.eq(v.clone()))
+        })
+        .apply_if(params.operator.as_ref(), |q, v| {
+            q.filter(order_list::Column::OperatorId.eq(*v))
+        })
+        .paged::<DatabaseConnection, _, GetOrder>(params.paging, db.get_ref())
+        .await
+}
+
 #[p(
-    params(PagingRequest),
+    params(OrderFilter),
     responses(
         (status = OK, description = "Get sell list successfully", body = [GetOrder]),
     ),
@@ -64,14 +93,11 @@ pub async fn sell_book(
 )]
 #[get("/sell")]
 pub async fn get_sell_list(
-    paging: Query<PagingRequest>,
+    paging: Query<OrderFilter>,
     _auth: APermission<JwtClaims, AllowAdmin>,
     db: Data<DatabaseConnection>,
 ) -> AResult<HttpResponse> {
-    entity::order_list::Entity::find()
-        .filter(order_list::Column::Typ.eq(TicketType::Sell))
-        .paged::<DatabaseConnection, _, GetOrder>(paging.into_inner(), db.get_ref())
-        .await
+    get_order_list(paging, db, TicketType::Sell).await
 }
 
 #[p(
@@ -192,7 +218,7 @@ pub async fn stock_book(
 }
 
 #[p(
-    params(PagingRequest),
+    params(OrderFilter),
     responses(
         (status = OK, description = "Get stock list successfully", body = [GetOrder]),
     ),
@@ -200,14 +226,11 @@ pub async fn stock_book(
 )]
 #[get("/stock")]
 pub async fn get_stock_list(
-    paging: Query<PagingRequest>,
+    params: Query<OrderFilter>,
     _auth: APermission<JwtClaims, AllowAdmin>,
     db: Data<DatabaseConnection>,
 ) -> AResult<HttpResponse> {
-    entity::order_list::Entity::find()
-        .filter(order_list::Column::Typ.eq(TicketType::Stock))
-        .paged::<DatabaseConnection, _, GetOrder>(paging.into_inner(), db.get_ref())
-        .await
+    get_order_list(params, db, TicketType::Stock).await
 }
 
 #[p(
