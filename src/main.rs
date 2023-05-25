@@ -3,6 +3,7 @@ use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
 use log::{error, info, warn};
 use migration::{Migrator, MigratorTrait};
+use mimalloc::MiMalloc;
 use sea_orm::Database;
 use std::env;
 use tokio::sync::Mutex;
@@ -13,6 +14,9 @@ use crate::contants::envs;
 mod api;
 mod contants;
 mod utils;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -77,7 +81,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(db.clone()))
             .app_data(web::Data::new(redis_conn.clone().map(Mutex::new)))
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind(("0.0.0.0", 8080))?
     .run()
     .await
 }

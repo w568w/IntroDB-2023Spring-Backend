@@ -1,0 +1,42 @@
+services:
+  database:
+    image: mysql:8.0
+    container_name: backend_database
+    networks:
+      - backend_lan
+    volumes:
+      - mysql-data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=test_password
+      - MYSQL_DATABASE=midpj
+  
+  redis:
+    image: redis:alpine
+    container_name: backend_redis
+    networks:
+      - backend_lan
+    
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: backend_server
+    depends_on:
+      - database
+      - redis
+    environment:
+      - DB_URL=mysql://root:test_password@database:3306/midpj
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=th1s_1s_0ur_s3cr3t
+      - ALLOW_ALL_CORS=true
+      - RUST_LOG=info
+    networks:
+      - backend_lan
+    ports:
+      - 8080:8080
+
+volumes:
+  mysql-data:
+
+networks:
+  backend_lan:

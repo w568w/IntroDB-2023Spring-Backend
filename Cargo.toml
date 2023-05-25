@@ -7,13 +7,19 @@ publish = false
 [workspace]
 members = [".", "entity", "migration"]
 
+[profile.release]
+# 启用完全 LTO 优化，提高性能，但是编译时间会变长
+lto = true
+# 要求编译器不要将代码分割成多个单元，也可以提高性能，但是编译时间会变长
+codegen-units = 1
+
 [workspace.dependencies]
 # 跨 Package 的依赖。各个 Package 只需要在 Cargo.toml 中声明依赖 { workspace = true } 即可。
 
 # ORM 框架
 sea-orm = { version = "^0.11", features = [
     "sqlx-mysql",
-    "runtime-actix-native-tls",
+    "runtime-actix-rustls",
     "macros",
 ] }
 sea-orm-migration = "^0.11"
@@ -63,6 +69,8 @@ argon2 = "^0.5"
 utoipa-swagger-ui = { version = "^3", features = ["actix-web"] }
 # 宏计数
 count-macro = "^0.2"
+# 性能更高的内存分配器
+mimalloc = { version = "^0.1", default-features = false }
 
 utoipa = { workspace = true }
 sea-orm = { workspace = true }
