@@ -18,8 +18,8 @@ use entity::order_list::{GetOrder, NewOrder};
 
 use entity::{order_list, TicketStatus, TicketType};
 use sea_orm::{
-    ActiveModelTrait, ConnectionTrait, DatabaseConnection, EntityTrait,
-    IntoActiveModel, Set, TransactionTrait,
+    ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait,
+    IntoActiveModel, QueryFilter, Set, TransactionTrait,
 };
 
 #[p(
@@ -69,6 +69,7 @@ pub async fn get_sell_list(
     db: Data<DatabaseConnection>,
 ) -> AResult<HttpResponse> {
     entity::order_list::Entity::find()
+        .filter(order_list::Column::Typ.eq(TicketType::Sell))
         .paged::<DatabaseConnection, _, GetOrder>(paging.into_inner(), db.get_ref())
         .await
 }
@@ -204,6 +205,7 @@ pub async fn get_stock_list(
     db: Data<DatabaseConnection>,
 ) -> AResult<HttpResponse> {
     entity::order_list::Entity::find()
+        .filter(order_list::Column::Typ.eq(TicketType::Stock))
         .paged::<DatabaseConnection, _, GetOrder>(paging.into_inner(), db.get_ref())
         .await
 }
