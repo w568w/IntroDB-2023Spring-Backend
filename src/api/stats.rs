@@ -3,37 +3,35 @@ use std::borrow::Borrow;
 use crate::contants;
 use crate::utils::errors::internal_server_error;
 
-
-
-
 use crate::utils::jwt::AllowAdmin;
 use crate::utils::jwt::JwtClaims;
 use crate::utils::permission::APermission;
 
 use super::preclude::*;
 
-
 use actix_web::web::Data;
 
-use actix_web::{
-    get,
-    web::{Query},
-};
+use actix_web::{get, web::Query};
 
 use entity::TicketStatus;
 use entity::TicketType;
 
+use entity::book::NewBookInfo;
+use log::info;
 use sea_orm::sea_query::types::Alias;
+use sea_orm::sea_query::Expr;
+use sea_orm::FromQueryResult;
+use sea_orm::IntoSimpleExpr;
+use sea_orm::Iterable;
+use sea_orm::QueryOrder;
+use sea_orm::Statement;
 
 use sea_orm::ConnectionTrait;
 use sea_orm::QuerySelect;
 use sea_orm::QueryTrait;
 use sea_orm::Select;
 
-
-use sea_orm::{
-    ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter,
-};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use serde::Deserialize;
 use serde::Serialize;
 use utoipa::IntoParams;
@@ -357,4 +355,73 @@ pub async fn stat_book(
         .await?
         .0,
     }))
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct StatBestsell {
+    pub isbn: String,
+    #[serde(flatten)]
+    pub info: NewBookInfo,
+    pub total_sell_count: i32,
+}
+
+#[p(
+    params(StatOption),
+    responses(
+        (status = OK, description = "Stat successful", body = Vec<StatBestsell>),
+    ),
+    security(("jwt_token" = []))
+)]
+#[get("/stats/bestsell")]
+pub async fn stat_bestsell(
+    param: Query<StatOption>,
+    db: Data<DatabaseConnection>,
+    _auth: APermission<JwtClaims, AllowAdmin>,
+) -> AResult<AJson<Vec<StatBestsell>>> {
+    let mut query = param
+        .span
+        .with_constraint(
+            entity::order_list::Entity::find(),
+            entity::order_list::Column::CreatedAt,
+        )
+        .filter(entity::order_list::Column::Typ.eq(TicketType::Sell))
+        .filter(entity::order_list::Column::Status.eq(TicketStatus::Done))
+        .find_also_related(entity::book::Entity)
+        .select_only()
+        .columns(entity::book::Column::iter().collect::<Vec<_>>())
+        .column_as(
+            entity::order_list::Column::TotalCount
+                .sum()
+                .cast_as(Alias::new(SINT_TYPE)),
+            TOTAL_COUNT,
+        )
+        .order_by_desc(Expr::val(TOTAL_COUNT))
+        .limit(10);
+
+    // query.group_by() 每次只能加一个，所以要加多个的话，需要用 add_group_by
+    QueryOrder::query(&mut query).add_group_by(
+        entity::book::Column::iter()
+            .map(IntoSimpleExpr::into_simple_expr)
+            .collect::<Vec<_>>(),
+    );
+
+    // fixme: 使用预烘焙的 SQL。为什么直接使用 query 会卡死？
+    let baked_sql = query.build(db.get_database_backend()).to_string();
+    info!("Query SQL: {}", baked_sql);
+    let results = db
+        .query_all(Statement::from_string(db.get_database_backend(), baked_sql))
+        .await?;
+
+    let mut books = Vec::with_capacity(results.len());
+
+    for result in results {
+        let book = entity::book::Model::from_query_result(&result, "")?;
+        let count = result.try_get::<Option<i32>>("", TOTAL_COUNT)?.unwrap_or(0);
+        books.push(StatBestsell {
+            isbn: book.isbn.clone(),
+            info: book.into(),
+            total_sell_count: count,
+        });
+    }
+    Ok(AJson(books))
 }

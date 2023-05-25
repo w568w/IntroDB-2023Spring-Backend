@@ -10,8 +10,8 @@ pub mod auth;
 pub mod books;
 pub mod orders;
 mod preclude;
-pub mod transactions;
 pub mod stats;
+pub mod transactions;
 
 #[derive(Serialize, ToSchema)]
 pub struct GeneralResponse {
@@ -58,6 +58,7 @@ pub struct PagingRequest {
         stats::stat_stock,
         stats::stat_sell,
         stats::stat_book,
+        stats::stat_bestsell,
     ),
     components(schemas(
         auth::LoginRequest,
@@ -68,6 +69,7 @@ pub struct PagingRequest {
         stats::StatStock,
         stats::StatSell,
         stats::StatBook,
+        stats::StatBestsell,
         GeneralResponse,
         PagingRequest,
         entity::user::GetUser,
@@ -131,6 +133,7 @@ pub fn configure() -> impl FnOnce(&mut ServiceConfig) {
             .service(stats::stat_transaction)
             .service(stats::stat_stock)
             .service(stats::stat_sell)
-            .service(stats::stat_book);
+            .service(stats::stat_book)
+            .service(stats::stat_bestsell);
     }
 }

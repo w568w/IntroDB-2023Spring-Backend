@@ -1,3 +1,4 @@
+use fromsuper::FromSuper;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -42,7 +43,8 @@ pub struct UpdateBook {
     pub out_price: f32,
 }
 
-#[derive(Clone, ToSchema, DeriveIntoActiveModel, Deserialize)]
+#[derive(Clone, ToSchema, DeriveIntoActiveModel, Serialize, Deserialize, FromSuper)]
+#[fromsuper(from_type = "Model")]
 pub struct NewBookInfo {
     pub title: String,
     pub author: String,
