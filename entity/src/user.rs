@@ -1,7 +1,7 @@
 use crate::{to_active, Sex};
 use chrono::Utc;
 use redis_macros::{FromRedisValue, ToRedisArgs};
-use sea_orm::{entity::prelude::*, ActiveValue::NotSet, IntoActiveModel};
+use sea_orm::{entity::prelude::*, ActiveValue::NotSet, IntoActiveModel, Set};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -66,13 +66,28 @@ impl From<Model> for GetUser {
     }
 }
 
-#[derive(ToSchema, DeriveIntoActiveModel, Deserialize)]
+#[derive(ToSchema, Deserialize)]
 pub struct NewUser {
     pub password_salt: String,
     pub role: String,
     pub real_name: String,
     pub sex: Sex,
-    pub birth: DateTime,
+    pub birth: Option<DateTime>,
+}
+
+impl IntoActiveModel<ActiveModel> for NewUser {
+    fn into_active_model(self) -> ActiveModel {
+        ActiveModel {
+            id: NotSet,
+            password_salt: Set(self.password_salt),
+            secret_key: NotSet,
+            role: Set(self.role),
+            real_name: Set(self.real_name),
+            sex: Set(self.sex),
+            birth: to_active(self.birth),
+            is_deleted: Set(false),
+        }
+    }
 }
 
 #[derive(ToSchema, Deserialize)]
