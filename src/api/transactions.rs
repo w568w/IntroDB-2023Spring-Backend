@@ -1,4 +1,4 @@
-use crate::utils::ext::SelectExt;
+use crate::utils::ext::SelectTwoExt;
 use crate::utils::jwt::{AllowAdmin, JwtClaims};
 use crate::utils::permission::APermission;
 
@@ -43,6 +43,7 @@ pub async fn get_transaction_list(
         .apply_if(params.to, |q, v| {
             q.filter(entity::transaction::Column::CreatedAt.lt(v))
         })
+        .find_also_related(entity::order_list::Entity)
         .paged::<DatabaseConnection, _, GetTransaction>(params.paging, db.get_ref())
         .await
 }
