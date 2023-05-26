@@ -1,5 +1,5 @@
 use crate::{to_active, Sex};
-use fromsuper::FromSuper;
+use chrono::Utc;
 use redis_macros::{FromRedisValue, ToRedisArgs};
 use sea_orm::{entity::prelude::*, ActiveValue::NotSet, IntoActiveModel};
 use serde::{Deserialize, Serialize};
@@ -21,6 +21,7 @@ pub struct Model {
     pub role: String,
     pub real_name: String,
     pub sex: Sex,
+    pub birth: DateTime,
     /// 是否已经删除
     #[sea_orm(default_value = "false")]
     pub is_deleted: bool,
@@ -43,13 +44,26 @@ impl Related<super::order_list::Entity> for Entity {
 
 impl ActiveModelBehavior for ActiveModel {}
 
-#[derive(FromSuper, ToSchema, Serialize)]
-#[fromsuper(from_type = "Model")]
+#[derive(ToSchema, Serialize)]
 pub struct GetUser {
     pub id: i32,
     pub role: String,
     pub real_name: String,
     pub sex: Sex,
+    pub age: i64,
+}
+
+impl From<Model> for GetUser {
+    fn from(value: Model) -> Self {
+        let age = Utc::now().naive_utc() - value.birth;
+        GetUser {
+            id: value.id,
+            role: value.role,
+            real_name: value.real_name,
+            sex: value.sex,
+            age: age.num_days() / 365,
+        }
+    }
 }
 
 #[derive(ToSchema, DeriveIntoActiveModel, Deserialize)]
@@ -58,6 +72,7 @@ pub struct NewUser {
     pub role: String,
     pub real_name: String,
     pub sex: Sex,
+    pub birth: DateTime,
 }
 
 #[derive(ToSchema, Deserialize)]
@@ -66,6 +81,7 @@ pub struct UpdateUser {
     pub role: Option<String>,
     pub real_name: Option<String>,
     pub sex: Option<Sex>,
+    pub birth: Option<DateTime>,
 }
 
 impl IntoActiveModel<ActiveModel> for UpdateUser {
@@ -77,6 +93,7 @@ impl IntoActiveModel<ActiveModel> for UpdateUser {
             role: to_active(self.role),
             real_name: to_active(self.real_name),
             sex: to_active(self.sex),
+            birth: to_active(self.birth),
             is_deleted: NotSet,
         }
     }
